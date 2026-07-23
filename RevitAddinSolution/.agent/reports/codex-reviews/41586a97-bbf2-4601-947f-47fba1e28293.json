@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "run_id": "41586a97-bbf2-4601-947f-47fba1e28293",
+  "task_id": "smoke_dual_skill",
+  "feature_name": "## Task",
+  "repository_root": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\source-code",
+  "source_project_root": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution",
+  "base_revision": "dbcd82af5aae72ff9b94f4752644a378319f5ad4",
+  "included_files": [
+    "src/Antigravity.IssueManager/Services/IssueBackupService.cs"
+  ],
+  "excluded_files": [],
+  "plan_files": [
+    ".agent/context/PLAN.md",
+    ".agent/context/TECHNICAL_DESIGN.md"
+  ],
+  "acceptance_files": [
+    ".agent/context/ACCEPTANCE_CRITERIA.md"
+  ],
+  "snapshot_hash": "e58c95f3e6ffc6d76af01657b00265ee2389bb14977e6537d8413b2753759a84",
+  "report_path": ".agent/reports/codex-reviews/41586a97-bbf2-4601-947f-47fba1e28293.md",
+  "status": "INFRA_FAIL",
+  "pid": 14560,
+  "started_at": "2026-07-16T16:19:32.126009",
+  "heartbeat_at": "2026-07-16T16:19:32.126009",
+  "completed_at": "2026-07-16T16:20:30.756314",
+  "exit_code": 2,
+  "isolated_repository_root": "C:\\Users\\Admin\\AppData\\Local\\Temp\\codex_review_kwhoks5r\\source-code",
+  "reason": "Codex exited with non-zero code."
+}

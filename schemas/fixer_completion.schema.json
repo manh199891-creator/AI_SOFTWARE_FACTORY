@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "task_id", "resolved_findings"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "task_id": {"type": ["string", "null"]},
+    "resolved_findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["finding_id", "evidence", "claimed_at"],
+        "properties": {
+          "finding_id": {"type": "string", "minLength": 1},
+          "evidence": {"type": "string", "minLength": 1},
+          "claimed_at": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

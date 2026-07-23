@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "handoff_id": "480d576a-da29-4184-b55d-ea21da5ca76f",
+  "created_at": "2026-07-21T08:27:01.434112+00:00",
+  "from_agent": "codex",
+  "to_agent": "antigravity",
+  "role_contract": {
+    "writer": "antigravity",
+    "verifier": "codex",
+    "concurrent_writes_allowed": false
+  },
+  "task_id": "auto_foundation_cleanup_fix",
+  "feature": "Cleanup AutoFoundation scope and encoding issues",
+  "mode": "code",
+  "cycle": 1,
+  "review_run_id": "76f709ee-0221-4ce6-bf54-50d6cf4a491a",
+  "review_snapshot_hash": "28a5521946ef98e5280cd774e0322128b4d55ae77ba083f68a5506f2349e4b6f",
+  "allowed_files": [
+    ".agents/context/**",
+    ".agents/factory/RevitAddinSolution/.agent/context/**",
+    "src/Antigravity.Core/**",
+    "src/Antigravity.Main/App.cs",
+    "src/Antigravity.DrawColumns/**",
+    "tests/**"
+  ],
+  "forbidden": [
+    ".git/**",
+    ".agent/state/**",
+    ".agent/reports/**",
+    "bin/**",
+    "obj/**",
+    ".agent/**",
+    ".agents/runtime/**",
+    ".agents/skills/**",
+    "*.dll",
+    "*.exe"
+  ],
+  "findings": [
+    {
+      "severity": "P1",
+      "file": "src/Antigravity.Core/Commands/AutoFoundationCommand.cs",
+      "line": 27,
+      "title": "Incompatible foundation types are exposed for placement",
+      "body": "The revised filter accepts every OneLevelBased structural-foundation symbol, including types without writable Double Length and Width parameters. The removed implementation explicitly enforced those requirements before invoking placement. Such a symbol can now become SelectedFamily and reach the modeless placement workflow, where CAD-derived dimensions cannot be applied, causing placement failure or incorrectly sized foundations. Retain the parameter capability checks when populating the selectable list."
+    },
+    {
+      "severity": "P2",
+      "file": "src/Antigravity.Core/Commands/AutoFoundationCommand.cs",
+      "line": 44,
+      "title": "Command succeeds with missing placement prerequisites",
+      "body": "When the document has no levels or no eligible foundation symbols, SelectedLevel or SelectedFamily remains null, but the command still opens the modeless window and returns Result.Succeeded. This changes the prior explicit failure behavior and permits an invalid request to reach the external-event workflow. Reject the command with a useful message, or guarantee that the window cannot raise the event until both selections are valid."
+    },
+    {
+      "severity": "P2",
+      "file": "src/Antigravity.Core/Geometry/PlanarFaceExtractor.cs",
+      "line": 400,
+      "title": "Grid rounding does not merge all endpoints within tolerance",
+      "body": "VertexKey.From rounds each coordinate independently to the nearest tolerance-sized grid point. Two endpoints less than _tolerance apart can fall on opposite sides of a rounding boundary and receive different keys (for example, x=0.00049 and x=0.00051 with tolerance 0.001). Consequently nominally closed CAD rings can remain disconnected and produce no face. Endpoint clustering must examine neighboring cells or otherwise merge vertices by actual distance."
+    },
+    {
+      "severity": "P1",
+      "file": "src/Antigravity.Core/Services/FoundationPlacementOrchestrator.cs",
+      "line": 48,
+      "title": "Invalid foundation elevations are no longer rejected",
+      "body": "PlaceFoundations removed the GetLevelElevationFor(data.Z) lookup and its finite-value guard. Consequently, data at an elevation for which the adapter cannot resolve a valid level now proceeds to foundation-type creation and placement. This regresses the previous trust-boundary validation and can create unused types or attempt placement against an invalid level. Restore the level-resolution check before TryGetOrCreateFoundationType, or pass the validated level through the placement API."
+    },
+    {
+      "severity": "P2",
+      "file": "src/Antigravity.Core/Services/CadParserService.cs",
+      "line": 57,
+      "title": "Segment limit is applied across unrelated elevations",
+      "body": "The 5,000-line guard counts every horizontal line in the layer before elevation grouping, although PlanarFaceExtractor's maxInputSegments limit applies to each individual extraction. A valid layer containing, for example, 3,000 lines at each of two elevations is rejected even though neither extraction exceeds the limit. Apply the limit to each elevation group immediately before ExtractFromSegments so independent elevations do not cause a false failure."
+    },
+    {
+      "severity": "P1",
+      "file": "src/Antigravity.Main/App.cs",
+      "line": 145,
+      "title": "Unrelated command registrations remain in the cleanup snapshot",
+      "body": "The change adds four architectural commands and, later, the unrelated HoanThien command plus a `Trigger delta` marker. These changes do not implement AutoFoundation cleanup and violate the technical-design requirement that no unrelated changes be included. They also introduce runtime dependencies on Antigravity.ArchModeling.dll and Antigravity.HoanThien.dll, widening deployment and startup risk. Remove these unrelated blocks and retain only the AutoFoundation registration needed by this task."
+    },
+    {
+      "severity": "P1",
+      "file": "tests/Antigravity.HoanThien.Tests/TestResults/TestResults.trx",
+      "line": 12,
+      "title": "Test run executed zero tests",
+      "body": "The committed validation result reports total=\"0\", executed=\"0\", and passed=\"0\". The accompanying warnings state that the xUnit adapter failed to load and no tests were discovered. Therefore this run provides no meaningful validation and does not satisfy AC-02; fix test discovery and produce a run that actually executes the relevant tests."
+    }
+  ],
+  "required_inputs": [
+    ".agent/reports/CODEX_REVIEW.md",
+    ".agent/context/MEMORY_CONTEXT.md",
+    ".agent/context/TASK_CONTEXT.json",
+    ".agent/context/TASK_SCOPE.json",
+    ".agent/context/ACCEPTANCE_CRITERIA.md"
+  ],
+  "completion_contract": {
+    "must_change_snapshot": true,
+    "must_stay_in_scope": true,
+    "must_run_verification": true,
+    "must_not_claim_codex_pass": true
+  }
+}

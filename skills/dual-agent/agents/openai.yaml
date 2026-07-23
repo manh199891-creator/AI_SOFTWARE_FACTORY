@@ -1,0 +1,6 @@
+interface:
+  display_name: "Dual Agent"
+  short_description: "Checkpointed Anti writer and Codex verifier"
+  default_prompt: "Use $dual-agent with durable writer checkpoints and phase-gated Codex review."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-21T09:03:30.098879+00:00",
+  "task_id": "auto_foundation_cleanup_fix",
+  "feature": "Dual Agent Pipeline",
+  "mode": "release",
+  "source_count": 29,
+  "matched_rule_count": 4,
+  "rules": [
+    {
+      "id": "dirty_baseline_or_scope",
+      "severity": "P1",
+      "count": 6,
+      "prevention": "Initialize a clean task baseline before copying task changes; never widen Allowed to hide unrelated dirty files.",
+      "example_source": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\.agent\\learning\\trajectories\\auto_foundation_cleanup_fix.jsonl"
+    },
+    {
+      "id": "blind_retry_after_failure_budget",
+      "severity": "P1",
+      "count": 3,
+      "prevention": "Do not rerun the same hypothesis. Change scoped code or provide a new falsifiable resume hypothesis.",
+      "example_source": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\.agent\\knowledge\\memory\\bugs\\auto_column.md"
+    },
+    {
+      "id": "review_batch_context_split",
+      "severity": "P2",
+      "count": 2,
+      "prevention": "Keep related production, project, and test files together in review context where possible.",
+      "example_source": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\.agent\\reports\\CODEX_REVIEW.md"
+    },
+    {
+      "id": "codex_sandbox_degraded",
+      "severity": "P3",
+      "count": 2,
+      "prevention": "Treat sandbox helper errors as a diagnostic warning unless Codex cannot return a valid review contract.",
+      "example_source": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\.agent\\reports\\CODEX_REVIEW.md"
+    }
+  ],
+  "recent_outcomes": [
+    {
+      "status": "BLOCKED",
+      "mode": "code",
+      "reason": "Guardrails failed"
+    },
+    {
+      "status": "BLOCKED",
+      "mode": "code",
+      "reason": "Guardrails failed"
+    },
+    {
+      "status": "BLOCKED",
+      "mode": "code",
+      "reason": "Guardrails failed"
+    },
+    {
+      "status": "BLOCKED",
+      "mode": "code",
+      "reason": "Guardrails failed"
+    },
+    {
+      "status": "BLOCKED",
+      "mode": "code",
+      "reason": "BLOCKED"
+    },
+    {
+      "status": "BLOCKED_VERIFY",
+      "mode": "code",
+      "reason": "Required verification failed"
+    },
+    {
+      "status": "BLOCKED",
+      "mode": "release",
+      "reason": "TASK_SCOPE.json mode mismatch. Expected release, found code"
+    },
+    {
+      "status": "BLOCKED",
+      "mode": "release",
+      "reason": "TASK_SCOPE.json mode mismatch. Expected release, found code"
+    }
+  ],
+  "token_policy": {
+    "strategy": "compact_index_first",
+    "max_context_chars": 4000,
+    "full_memory_loaded_by_default": false
+  }
+}

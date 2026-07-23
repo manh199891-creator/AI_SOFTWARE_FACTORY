@@ -1,0 +1,58 @@
+{
+  "project_name": "TestProject",
+  "build_command": "echo 'TBD'",
+  "test_command": "echo 'TBD'",
+  "lint_command": "echo 'TBD'",
+  "codex_review": {
+    "timeout_seconds": 180,
+    "max_diff_chars": 60000,
+    "max_file_chars": 40000,
+    "batch_max_files": 3,
+    "batch_max_chars": 70000,
+    "max_timeout_retries": 2
+  },
+  "review_routing": {
+    "quick_max_files": 3,
+    "quick_max_changed_lines": 50,
+    "deep_min_files": 11,
+    "deep_min_changed_lines": 301,
+    "sensitive_paths": [
+      "**/auth/**",
+      "**/security/**",
+      "**/permissions/**",
+      "**/*secret*",
+      "**/*credential*",
+      "**/migrations/**"
+    ]
+  },
+  "evidence_policy": {
+    "required_for_gate": true,
+    "required_stages": [
+      "build",
+      "test",
+      "lint"
+    ]
+  },
+  "failure_budget": {
+    "max_failed_attempts": 3
+  },
+  "dual_agents": {
+    "topology": "single_writer_independent_verifier",
+    "writer": "antigravity",
+    "verifier": "codex",
+    "fixer_provider": "antigravity",
+    "auto_fix": false,
+    "fixer_timeout_seconds": 900
+  },
+  "knowledge": {
+    "capture_learning_on_pass": false
+  },
+  "runtime_validation": {
+    "type": "manual",
+    "required_for_gate": false
+  },
+  "stage_patterns": [],
+  "allowed_scope": [
+    "source-code"
+  ]
+}

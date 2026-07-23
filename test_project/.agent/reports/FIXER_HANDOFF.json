@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "handoff_id": "d2e36490-1383-425e-a2a6-c32287fb2f89",
+  "created_at": "2026-07-22T10:35:47.796220+00:00",
+  "from_agent": "codex",
+  "to_agent": "antigravity",
+  "role_contract": {
+    "writer": "antigravity",
+    "verifier": "codex",
+    "concurrent_writes_allowed": false
+  },
+  "task_id": "incident_plan",
+  "feature": "Test dual",
+  "mode": "plan",
+  "cycle": 1,
+  "review_run_id": "c62f81e2-ff55-4e8c-9525-459e61e82ac9",
+  "review_snapshot_hash": "f39084da5b03cad3fdeacab29def5c44b0fc35fd6cc6bb3472be22d30df5cf1c",
+  "allowed_files": [
+    "**/*"
+  ],
+  "forbidden": [
+    ".git/**",
+    ".agent/state/**",
+    ".agent/reports/**",
+    "bin/**",
+    "obj/**"
+  ],
+  "findings": [
+    {
+      "severity": "P1",
+      "file": "file1.txt",
+      "line": 10,
+      "title": "Bug found",
+      "body": "There is a severe bug here."
+    }
+  ],
+  "review_evidence_truncated": false,
+  "writer_rules": [
+    "Fix all findings from this review in one coherent pass.",
+    "Preserve previously established security, benchmark, rollback, and traceability contracts.",
+    "Do not delete substantive sections merely to reduce artifact size or fit a presumed context limit.",
+    "Only request another review after the reviewed snapshot has materially changed.",
+    "Write .agent/context/WRITER_CHECKPOINT_REQUEST.json and invoke the rendered checkpoint command.",
+    "Never write .agent/state/writer_checkpoint.json directly and never invoke Codex or dual run."
+  ],
+  "required_inputs": [
+    ".agent/reports/CODEX_REVIEW.md",
+    ".agent/context/MEMORY_CONTEXT.md",
+    ".agent/context/TASK_CONTEXT.json",
+    ".agent/context/TASK_SCOPE.json",
+    ".agent/context/ACCEPTANCE_CRITERIA.md",
+    ".agent/context/PLAN.md",
+    ".agent/context/TECHNICAL_DESIGN.md"
+  ],
+  "completion_contract": {
+    "must_change_snapshot": true,
+    "must_stay_in_scope": true,
+    "must_run_verification": false,
+    "must_not_claim_codex_pass": true,
+    "resolution_evidence_command": "python harness.py <project> claim-fix <finding_id> <evidence>",
+    "checkpoint_request_path": ".agent/context/WRITER_CHECKPOINT_REQUEST.json",
+    "checkpoint_schema": ".agents/runtime/schemas/writer_checkpoint.schema.json",
+    "checkpoint_command": "powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/dual-agent-pipeline/scripts/dual_checkpoint.ps1 -Project test_project"
+  }
+}

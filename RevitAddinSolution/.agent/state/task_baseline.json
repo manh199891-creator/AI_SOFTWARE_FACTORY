@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "task_id": "auto_foundation_cleanup_fix",
+  "captured_at": "2026-07-21T16:00:00+07:00",
+  "base_revision": "2efd3592676ee389882a6b53dc0ce597f23ef514",
+  "snapshot_hash": "e9df3adf25186c7cdcc3d7511baa25d793df86c6b5c4cc473871b06f86f9ec6d",
+  "files": {}
+}

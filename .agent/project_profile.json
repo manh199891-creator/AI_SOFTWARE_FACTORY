@@ -1,0 +1,24 @@
+{
+  "project_id": "ai_software_factory",
+  "project_type": "python_factory_runtime",
+  "source_path": ".",
+  "build_command": "",
+  "test_command": "python -m unittest test_runtime_integrity.py test_sync_dual_agent_pipeline.py test_dual_loop_guards.py",
+  "lint_command": "python -m py_compile harness.py review_pipeline.py dual_agent_runtime.py workflow_governance.py convergence_pipeline.py runtime_integrity.py",
+  "stage_patterns": ["*.py", "schemas/**", "skills/**", "scripts/**", "docs/**", ".agent/project_profile.json"],
+  "dual_forbidden": [".git/**", ".agent/**", "scratch/**", "RevitAddinSolution/**", "NavisAddinSolution/**", "TrendingUpdate/**", "**/__pycache__/**"],
+  "dual_agents": {
+    "topology": "single_writer_independent_verifier",
+    "writer": "antigravity",
+    "verifier": "codex",
+    "auto_fix": false,
+    "convergence_v2": true,
+    "convergence_shadow": false,
+    "max_reviews_per_phase": 6,
+    "execution_policy": "checkpointed",
+    "review_boundaries": ["RB-1", "RB-2", "RB-3"]
+  },
+  "integrity_mode": "canonical",
+  "failure_budget": {"max_failed_attempts": 3},
+  "codex_review": {"timeout_seconds": 300, "max_diff_chars": 120000, "max_file_chars": 120000}
+}

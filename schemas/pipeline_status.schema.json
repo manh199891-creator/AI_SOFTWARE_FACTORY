@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["status_version","status","terminal","task_id","mode","lifecycle_phase","review_kind","review_boundary_id","run_id","snapshot_hash","previous_snapshot_hash","reason_code","reason","next_action","writer_status","writer_checkpoint_id","work_item_current","work_item_total","phase_review_count","batch_review_count","failure_budget_remaining","ready_for_codex","history","updated_at"],
+  "properties": {
+    "status_version":{"const":2},
+    "status":{"enum":["NOT_STARTED","RUNNING","NEEDS_FIX","READY_FOR_REVIEW","REVIEWING","PASS","INFRA_FAIL","STALE","NO_PROGRESS","BLOCKED_HANDOFF","STATE_DESYNC","PHASE_REVIEW_CEILING","BATCH_REVIEW_CEILING","BLOCKED_SCOPE","BLOCKED_VERIFY"]},
+    "terminal":{"type":"boolean"}, "task_id":{"type":"string","minLength":1}, "mode":{"type":"string","minLength":1}, "lifecycle_phase":{"type":"string","minLength":1},
+    "review_kind":{"type":"string"}, "review_boundary_id":{"type":["string","null"]}, "run_id":{"type":["string","null"]}, "snapshot_hash":{"type":"string"}, "previous_snapshot_hash":{"type":["string","null"]},
+    "reason_code":{"type":"string"}, "reason":{"type":"string"}, "next_action":{"type":"string"}, "writer_status":{"type":"string"}, "writer_checkpoint_id":{"type":["string","null"]},
+    "work_item_current":{"type":"integer","minimum":0}, "work_item_total":{"type":"integer","minimum":0}, "phase_review_count":{"type":"integer","minimum":0}, "batch_review_count":{"type":"integer","minimum":0}, "failure_budget_remaining":{"type":"integer","minimum":0}, "ready_for_codex":{"type":"boolean"}, "history":{"type":"array"}, "updated_at":{"type":"string"}
+  }, "additionalProperties": false
+}

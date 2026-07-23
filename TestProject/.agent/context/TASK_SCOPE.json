@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "task1",
+  "repository_root": "E:\\AI_SOFTWARE_FACTORY\\TestProject\\source-code",
+  "allowed_files": [
+    "dummy.py"
+  ],
+  "forbidden": [
+    ".git/**",
+    ".agent/state/**",
+    ".agent/reports/**",
+    "bin/**",
+    "obj/**"
+  ],
+  "plan_files": [
+    ".agent/context/PLAN.md",
+    ".agent/context/TECHNICAL_DESIGN.md"
+  ],
+  "acceptance_criteria_files": [
+    ".agent/context/ACCEPTANCE_CRITERIA.md"
+  ],
+  "implementation_report_files": [
+    ".agent/reports/IMPLEMENTATION_REPORT.md"
+  ]
+}

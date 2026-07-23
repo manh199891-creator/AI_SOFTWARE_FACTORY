@@ -1,0 +1,41 @@
+{
+  "project_id": "trending_update",
+  "project_type": "python_cli",
+  "source_path": "source-code",
+  "build_command": "",
+  "test_command": "",
+  "lint_command": "",
+  "stage_patterns": ["**/*.py", "**/*.json", "**/*.md", "!docs/**"],
+  "dual_forbidden": ["__pycache__/**", ".pytest_cache/**", ".agent/**"],
+  "fixer_command": "",
+  "dual_agents": {
+    "topology": "single_writer_independent_verifier",
+    "writer": "antigravity",
+    "verifier": "codex",
+    "fixer_provider": "antigravity",
+    "auto_fix": true,
+    "fixer_timeout_seconds": 900
+  },
+  "evidence_policy": {"required_for_gate": false, "required_stages": []},
+  "failure_budget": {"max_failed_attempts": 3},
+  "review_routing": {
+    "quick_max_files": 3,
+    "quick_max_changed_lines": 50,
+    "deep_min_files": 11,
+    "deep_min_changed_lines": 301,
+    "sensitive_paths": ["**/auth/**", "**/security/**", "**/migrations/**"]
+  },
+  "learning": {"shadow_min_improvement": 0.02, "max_artifact_growth": 0.25, "canary_percent": 10, "auto_promote": false},
+  "runtime_validation": {
+    "required": true,
+    "type": "cli_smoke_test",
+    "report": ".agent/reports/RUNTIME_VALIDATION_REPORT.md"
+  },
+  "release_requires": {
+    "build_pass": false,
+    "qa_pass": true,
+    "codex_real_review_pass": true,
+    "diff_hash_match": true,
+    "runtime_validation_pass": true
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "run_id": "624c1973-0574-468f-9ed1-d7314a6b80f3",
+  "task_id": "smoke_dual_skill",
+  "feature_name": "## Task",
+  "repository_root": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\source-code",
+  "source_project_root": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution",
+  "base_revision": "dbcd82af5aae72ff9b94f4752644a378319f5ad4",
+  "included_files": [
+    "src/Antigravity.IssueManager/Services/IssueBackupService.cs"
+  ],
+  "excluded_files": [],
+  "plan_files": [
+    ".agent/context/PLAN.md",
+    ".agent/context/TECHNICAL_DESIGN.md"
+  ],
+  "acceptance_files": [
+    ".agent/context/ACCEPTANCE_CRITERIA.md"
+  ],
+  "snapshot_hash": "e58c95f3e6ffc6d76af01657b00265ee2389bb14977e6537d8413b2753759a84",
+  "report_path": ".agent/reports/codex-reviews/624c1973-0574-468f-9ed1-d7314a6b80f3.md",
+  "status": "INFRA_FAIL",
+  "pid": 25044,
+  "started_at": "2026-07-16T16:52:57.316484",
+  "heartbeat_at": "2026-07-16T16:52:57.316484",
+  "completed_at": "2026-07-16T16:53:05.618304",
+  "exit_code": -1,
+  "isolated_repository_root": "C:\\Users\\Admin\\AppData\\Local\\Temp\\codex_review_52lrrw_w\\source-code",
+  "reason": "Timeout (5s)"
+}

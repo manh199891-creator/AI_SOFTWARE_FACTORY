@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "entries"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "updated_at": {"type": "string"},
+    "entries": {"type": "array", "items": {
+      "type": "object",
+      "required": ["finding_id", "family", "severity", "status", "first_seen_run", "last_seen_run", "last_seen_snapshot", "resolution_evidence", "resolved_snapshot", "regression_count"],
+      "properties": {
+        "finding_id": {"type": "string", "minLength": 1}, "family": {"type": "string"},
+        "severity": {"enum": ["P0", "P1", "P2", "P3"]},
+        "status": {"enum": ["OPEN", "FIX_CLAIMED", "VERIFIED_RESOLVED", "REGRESSED", "SUPERSEDED", "DEFERRED", "NEEDS_TRIAGE"]},
+        "first_seen_run": {"type": "string"}, "last_seen_run": {"type": "string"},
+        "last_seen_snapshot": {"type": "string"}, "resolution_evidence": {"type": "array"},
+        "resolved_snapshot": {"type": ["string", "null"]}, "regression_count": {"type": "integer", "minimum": 0}
+      }, "additionalProperties": true
+    }}
+  }, "additionalProperties": true
+}

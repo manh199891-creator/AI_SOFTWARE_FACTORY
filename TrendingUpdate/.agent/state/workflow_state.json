@@ -1,0 +1,30 @@
+{
+  "task_id": "task-001",
+  "task_name": "initial-setup",
+  "current_phase": "phase_00",
+  "current_agent": "none",
+  "current_conversation": "none",
+  "status": "initialized",
+  "qa_status": "pending",
+  "codex_status": "pending",
+  "retry_count": 0,
+  "max_retry": 2,
+  "next_step": "claude_plan",
+  "artifacts": {
+    "project_context": ".agent/context/PROJECT_CONTEXT.md",
+    "plan": ".agent/context/PLAN.md",
+    "phases": ".agent/context/PHASES.md",
+    "acceptance_criteria": ".agent/context/ACCEPTANCE_CRITERIA.md",
+    "technical_design": ".agent/context/TECHNICAL_DESIGN.md",
+    "architecture_decision": ".agent/context/ARCHITECTURE_DECISION.md",
+    "impact_analysis": ".agent/context/IMPACT_ANALYSIS.md",
+    "risk_analysis": ".agent/context/RISK_ANALYSIS.md",
+    "implementation_report": ".agent/reports/IMPLEMENTATION_REPORT.md",
+    "qa_report": ".agent/reports/QA_REPORT.md",
+    "codex_review": ".agent/reports/CODEX_REVIEW.md",
+    "fix_report": ".agent/reports/FIX_REPORT.md",
+    "final_report": ".agent/reports/FINAL_REPORT.md",
+    "pr_description": ".agent/reports/PR_DESCRIPTION.md",
+    "release_notes": ".agent/reports/RELEASE_NOTES.md"
+  }
+}

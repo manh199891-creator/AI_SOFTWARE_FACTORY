@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["manifest_version", "files", "managed_profiles", "manifest_sha256"],
+  "properties": {
+    "manifest_version": {"const": 1},
+    "files": {"type": "array", "items": {"type": "object", "required": ["path", "sha256", "size"], "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "size": {"type": "integer", "minimum": 0}}, "additionalProperties": false}},
+    "managed_profiles": {"type": "object"},
+    "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "additionalProperties": false
+}

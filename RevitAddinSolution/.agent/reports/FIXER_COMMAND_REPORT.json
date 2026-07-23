@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "started_at": "2026-07-21T08:27:01.505744+00:00",
+  "completed_at": "2026-07-21T08:32:05.808071+00:00",
+  "status": "INFRA_FAIL",
+  "reason": "Antigravity exited with code 1",
+  "handoff_id": "480d576a-da29-4184-b55d-ea21da5ca76f",
+  "executable": "C:\\Users\\Admin\\AppData\\Local\\agy\\bin\\agy.exe",
+  "exit_code": 1,
+  "output": "Error: timeout waiting for response"
+}

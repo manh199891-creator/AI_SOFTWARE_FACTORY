@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "run_id": "689a22f2-23e4-43b5-8cbd-e968442b575f",
+  "task_id": "smoke_dual_skill",
+  "feature_name": "## Task",
+  "repository_root": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\source-code",
+  "source_project_root": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution",
+  "base_revision": "dbcd82af5aae72ff9b94f4752644a378319f5ad4",
+  "included_files": [
+    "src/Antigravity.IssueManager/Services/IssueBackupService.cs"
+  ],
+  "excluded_files": [],
+  "plan_files": [
+    ".agent/context/PLAN.md",
+    ".agent/context/TECHNICAL_DESIGN.md"
+  ],
+  "acceptance_files": [
+    ".agent/context/ACCEPTANCE_CRITERIA.md"
+  ],
+  "snapshot_hash": "e58c95f3e6ffc6d76af01657b00265ee2389bb14977e6537d8413b2753759a84",
+  "report_path": ".agent/reports/codex-reviews/689a22f2-23e4-43b5-8cbd-e968442b575f.md",
+  "status": "INFRA_FAIL",
+  "pid": 18232,
+  "started_at": "2026-07-16T16:34:18.520330",
+  "heartbeat_at": "2026-07-16T16:34:18.520330",
+  "completed_at": "2026-07-16T16:38:10.230499",
+  "exit_code": 0,
+  "isolated_repository_root": "C:\\Users\\Admin\\AppData\\Local\\Temp\\codex_review_j22r8434\\source-code",
+  "reason": "Failed to parse JSON output contract from Codex."
+}

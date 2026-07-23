@@ -1,0 +1,6 @@
+## Source: QA
+## Fix 1: OpeningHandler chưa được wire up. / e:\Antigravity\RevitAddinSolution\src\Antigravity.HoanThien\Services\RoomBoundaryService.cs / Added call to OpeningHandler.SplitCurveAroundOpening and fixed OpeningHandler.GetOpenings / Build sau fix: PASS
+## Fix 2: Duplicate detection chưa làm. / e:\Antigravity\RevitAddinSolution\src\Antigravity.HoanThien\Handlers\HoanThienHandler.cs / Added duplicate check by querying elements with same AG_RoomNumber and AG_FinishType in room / Build sau fix: PASS
+## Fix 3: Shared parameters chưa set (Wall). / e:\Antigravity\RevitAddinSolution\src\Antigravity.HoanThien\Services\FinishWallBuilder.cs / Set AG_FinishType, AG_RoomNumber, AG_RoomName after wall creation / Build sau fix: PASS
+## Fix 4: Shared parameters chưa set (Floor). / e:\Antigravity\RevitAddinSolution\src\Antigravity.HoanThien\Services\FinishFloorBuilder.cs / Set FLOOR_HEIGHTABOVELEVEL_PARAM, AG_FinishType, AG_RoomNumber, AG_RoomName after floor creation / Build sau fix: PASS
+## Fix 5: Volume guard chưa abort. / e:\Antigravity\RevitAddinSolution\src\Antigravity.HoanThien\Handlers\HoanThienHandler.cs / Added return result statement when ComputeVolumes is off / Build sau fix: PASS

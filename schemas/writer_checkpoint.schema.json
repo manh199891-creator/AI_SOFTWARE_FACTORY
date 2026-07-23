@@ -1,0 +1,14 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema", "type":"object",
+  "required":["task_id","phase","work_item_current","work_item_total","status","snapshot_hash","changed_files","checks","finding_claims","blockers","risks","retry_hypothesis","ready_for_codex"],
+  "properties":{
+    "task_id":{"type":"string","minLength":1}, "phase":{"enum":["research","plan","code","release"]},
+    "work_item_current":{"type":"integer","minimum":0}, "work_item_total":{"type":"integer","minimum":1},
+    "status":{"enum":["IN_PROGRESS","TASK_COMPLETE","PHASE_COMPLETE","BLOCKED"]}, "snapshot_hash":{"type":"string","minLength":1},
+    "changed_files":{"type":"array","items":{"type":"string"}},
+    "checks":{"type":"array","minItems":1,"items":{"type":"object","required":["name","status","evidence"],"properties":{"name":{"type":"string"},"status":{"enum":["PASS","FAIL","SKIPPED"]},"evidence":{"type":"string"}},"additionalProperties":false}},
+    "finding_claims":{"type":"array","items":{"type":"object","required":["finding_id","evidence"],"properties":{"finding_id":{"type":"string"},"evidence":{"type":"string","minLength":1}},"additionalProperties":false}},
+    "blockers":{"type":"array","items":{"type":"object","required":["finding_id","evidence"],"properties":{"finding_id":{"type":"string"},"evidence":{"type":"string","minLength":1}},"additionalProperties":false}},
+    "risks":{"type":"array","items":{"type":"string"}}, "retry_hypothesis":{"type":"string"}, "ready_for_codex":{"type":"boolean"}, "review_kind":{"enum":["checkpoint","phase_gate"]}, "review_boundary_id":{"type":["string","null"]}, "rollback_evidence":{"type":"string"}
+  }, "additionalProperties":false
+}

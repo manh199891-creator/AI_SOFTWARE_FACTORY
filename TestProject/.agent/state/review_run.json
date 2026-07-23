@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "run_id": "30982d33-7b89-452d-9cd5-3530fdfc20c5",
+  "task_id": "unknown_task_id",
+  "feature_name": "unknown",
+  "repository_root": "E:\\AI_SOFTWARE_FACTORY\\TestProject\\source-code",
+  "source_project_root": "E:\\AI_SOFTWARE_FACTORY\\TestProject",
+  "base_revision": "af1f826dbe85a2a33744a5708b9a6c3f5a152348",
+  "included_files": [],
+  "excluded_files": [],
+  "plan_files": [],
+  "acceptance_files": [],
+  "snapshot_hash": "8a965a6a8817924638198066b80fcb698cb89c2299b1dc5b2ffff5b9f2e8688d",
+  "report_path": "",
+  "status": "INFRA_FAIL",
+  "pid": null,
+  "started_at": null,
+  "heartbeat_at": null,
+  "completed_at": "2026-07-18T11:28:37.429445",
+  "exit_code": -1,
+  "reason": "Manifest schema validation failed: No module named 'jsonschema'"
+}

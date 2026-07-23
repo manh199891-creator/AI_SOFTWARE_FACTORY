@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
+  "parent_logical_run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
+  "review_kind": "legacy",
+  "review_boundary_id": null,
+  "task_id": "incident_plan",
+  "feature_name": "Test dual",
+  "review_mode": "plan",
+  "review_lens": null,
+  "repository_root": "E:\\AI_SOFTWARE_FACTORY\\test_project\\source-code",
+  "source_project_root": "E:\\AI_SOFTWARE_FACTORY\\test_project",
+  "base_revision": "unknown",
+  "included_files": [
+    "PLAN.md",
+    "TECHNICAL_DESIGN.md",
+    "ACCEPTANCE_CRITERIA.md"
+  ],
+  "excluded_files": [],
+  "plan_files": [],
+  "acceptance_files": [],
+  "snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
+  "source_snapshot_hash": "ab3acf0c50cb9412bea5524386ca5bbe195ffc0fa5aa60c9c3a446e1c1cac476",
+  "learning_guard": {
+    "matched_rule_count": 0,
+    "context": ".agent/context/MEMORY_CONTEXT.md",
+    "report": ".agent/reports/LEARNING_GUARD.md"
+  },
+  "report_path": ".agent/reports/codex-reviews/8aa5d7cb-5c15-489d-ac42-eb3592dfbe16.md",
+  "status": "FAIL",
+  "started_at": "2026-07-22T10:35:48.534522+00:00",
+  "heartbeat_at": "2026-07-22T10:35:48.709391+00:00",
+  "completed_at": "2026-07-22T10:35:48.709391+00:00",
+  "exit_code": 0,
+  "reason": "Review found issues.",
+  "findings": [
+    {
+      "severity": "P1",
+      "file": "file1.txt",
+      "line": 10,
+      "title": "Bug found",
+      "body": "There is a severe bug here."
+    }
+  ],
+  "evidence_truncated": false
+}

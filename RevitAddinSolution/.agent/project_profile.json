@@ -1,0 +1,78 @@
+{
+  "project_id": "revit_addin",
+  "project_type": "dotnet_revit_addin",
+  "integrity_mode": "deployed",
+  "source_path": "source-code",
+  "build_command": "\"C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\MSBuild\\Current\\Bin\\MSBuild.exe\" src/Antigravity.Core/Antigravity.Core.csproj /t:Build /p:Configuration=Debug /v:minimal",
+  "test_command": "dotnet test tests/Antigravity.Core.Geometry.Tests/Antigravity.Core.Geometry.Tests.csproj --no-restore",
+  "lint_command": "",
+  "stage_patterns": ["src/**/*.cs", "src/**/*.xaml", "src/**/*.csproj", "tests/**/*.cs", "tests/**/*.csproj"],
+  "dual_forbidden": ["bin/**", "obj/**", ".agent/**"],
+  "fixer_command": "",
+  "dual_agents": {
+    "topology": "single_writer_independent_verifier",
+    "writer": "antigravity",
+    "verifier": "codex",
+    "fixer_provider": "antigravity",
+    "antigravity_model": "claude-sonnet-4-6",
+    "auto_fix": false,
+    "fixer_timeout_seconds": 900,
+    "convergence_v2": true,
+    "convergence_shadow": false,
+    "max_reviews_per_phase": 6,
+    "execution_policy": "checkpointed",
+    "review_boundaries": ["phase_completion", "configured_milestone", "p0_p1_blocker", "scope_change", "contract_regression"]
+  },
+  "evidence_policy": {
+    "required_for_gate": true,
+    "required_stages": ["build", "test"]
+  },
+  "failure_budget": {"max_failed_attempts": 3},
+  "review_routing": {
+    "quick_max_files": 3,
+    "quick_max_changed_lines": 50,
+    "deep_min_files": 11,
+    "deep_min_changed_lines": 301,
+    "sensitive_paths": ["**/auth/**", "**/security/**", "**/migrations/**", "src/Antigravity.Core/Geometry/**"]
+  },
+  "learning": {
+    "shadow_min_improvement": 0.02,
+    "max_artifact_growth": 0.25,
+    "canary_percent": 10,
+    "auto_promote": false
+  },
+  "codex_review": {
+    "timeout_seconds": 180,
+    "max_diff_chars": 60000,
+    "max_file_chars": 40000,
+    "batch_max_files": 3,
+    "batch_max_chars": 70000,
+    "max_timeout_retries": 2,
+    "focused_retry_enabled": true,
+    "compact_retry_context": true,
+    "final_deep_review_required": true,
+    "sensitive_paths": [
+      "**/auth/**",
+      "**/security/**",
+      "**/permissions/**",
+      "**/*secret*",
+      "**/*credential*",
+      "**/migrations/**",
+      "src/Antigravity.Core/Geometry/**",
+      "src/Antigravity.Core/Services/CadParserService.cs"
+    ]
+  },
+  "runtime_validation": {
+    "required_for_gate": false,
+    "type": "ricaun_revit_test",
+    "test_assembly": "tests/Antigravity.HoanThien.Tests/bin/Debug/net48/win-x64/Antigravity.HoanThien.Tests.dll",
+    "report": ".agent/reports/QA_RUNTIME_REPORT.md"
+  },
+  "release_requires": {
+    "build_pass": true,
+    "qa_pass": true,
+    "codex_real_review_pass": true,
+    "diff_hash_match": true,
+    "runtime_validation_pass": true
+  }
+}

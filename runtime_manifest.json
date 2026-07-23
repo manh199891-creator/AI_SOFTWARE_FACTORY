@@ -1,0 +1,253 @@
+{
+  "manifest_version": 1,
+  "files": [
+    {
+      "path": ".agent/project_profile.json",
+      "sha256": "efa438eef5fe494fd723eb00d6e6b9b1680866cd08de206b289b98bd9f03ed6d",
+      "size": 1197
+    },
+    {
+      "path": "convergence_pipeline.py",
+      "sha256": "756b8d56cb4538da22edc7415c673744d63160bfc4032ebf5ea7dcb058fc8c9a",
+      "size": 37799
+    },
+    {
+      "path": "dual_agent_runtime.py",
+      "sha256": "e132d891170055ed2cf8d8ec65159287fead42d271cc8ace29c4685892760d1b",
+      "size": 15687
+    },
+    {
+      "path": "evolution_pipeline.py",
+      "sha256": "f6e50a88b214a37055a90b735c193b6cdd4ffcd203e337b744541bf5fb2cf5e8",
+      "size": 13954
+    },
+    {
+      "path": "harness.py",
+      "sha256": "a9b510510a1f42627654b1c21c05af97a7545e19d57145182b8ad978544882ce",
+      "size": 118491
+    },
+    {
+      "path": "learning_guard.py",
+      "sha256": "12d0347beff277849cc58270a7c4fe3074238c0fef060a8c2e285dbf8bbb55f7",
+      "size": 10904
+    },
+    {
+      "path": "NavisAddinSolution/.agent/project_profile.json",
+      "sha256": "36a3fcb41bcaf0dd55eaaca89f83a0cca6bcc5e19f253df51ab061a00e703415",
+      "size": 1770
+    },
+    {
+      "path": "review_pipeline.py",
+      "sha256": "8ce9be3869392cd9e10a1f29fb39cef224cfcf4663ee0e996b5ab576911219d9",
+      "size": 77526
+    },
+    {
+      "path": "RevitAddinSolution/.agent/project_profile.json",
+      "sha256": "74407350c73ab5787cf7f78e8df15b036a2a6be084f1f3c7f96940911a1d6c54",
+      "size": 2779
+    },
+    {
+      "path": "runtime_integrity.py",
+      "sha256": "e31f4ec5a25f7797d727a55fbd202dc30641b910236c2850cd40220bbd57ead9",
+      "size": 10089
+    },
+    {
+      "path": "schemas/codex_review_output.schema.json",
+      "sha256": "640315658e42dc2e263fa795ab77bd91efeb3a275abc4a37a73128d6a4afaa88",
+      "size": 993
+    },
+    {
+      "path": "schemas/contract_ledger.schema.json",
+      "sha256": "2642800ad1eac2b9eed8f676e82680e33df8c1c4a68b516fcb7d867b2da4389d",
+      "size": 495
+    },
+    {
+      "path": "schemas/convergence_report.schema.json",
+      "sha256": "0fc5ef56d5f2e8dd4e55c2deb0ef9bbc00b5e0cf1984936015b8854e03597311",
+      "size": 451
+    },
+    {
+      "path": "schemas/evidence_manifest.schema.json",
+      "sha256": "6cc78eae2a70ddd96e8ac0db75dac46ed7c6e64a702a9e2b02481ee72a882f39",
+      "size": 1242
+    },
+    {
+      "path": "schemas/finding_ledger.schema.json",
+      "sha256": "b6ee2a588866b1ba3006a3d8f3ec2fc3362ec1048845087effc6199e6536226c",
+      "size": 1139
+    },
+    {
+      "path": "schemas/fixer_completion.schema.json",
+      "sha256": "d1a5574d2c04522de0cc5a37b5b48215a8b3b46aec29291ed085805a677a313e",
+      "size": 706
+    },
+    {
+      "path": "schemas/pipeline_status.schema.json",
+      "sha256": "4edb3754c20201eaa43d60ecbe242511daeffb130a96369e452ebfa6e431d717",
+      "size": 1748
+    },
+    {
+      "path": "schemas/pre_review_lint.schema.json",
+      "sha256": "0fa003aca0eb289391602e57583751adf0c9e4e388b1e2ae7492035a1fba7f1a",
+      "size": 659
+    },
+    {
+      "path": "schemas/review_run.schema.json",
+      "sha256": "760b081d86401111d78aa25dcd0631881d25fa15990f7f0feccea914a8c895e4",
+      "size": 3489
+    },
+    {
+      "path": "schemas/runtime_manifest.schema.json",
+      "sha256": "39f156ec8eef9168eefe1888659629e8d7b57e3c467f47368d87a06b0a55027e",
+      "size": 655
+    },
+    {
+      "path": "schemas/task_context.schema.json",
+      "sha256": "a05f0d397672c51d672679f37fc2c06eeafd4dbc226cae98e80212216922beeb",
+      "size": 1337
+    },
+    {
+      "path": "schemas/task_scope.schema.json",
+      "sha256": "e43d0b178ee3add33b16c05a5da8d12849ad72b36c37653203edc6c7e495471d",
+      "size": 1187
+    },
+    {
+      "path": "schemas/writer_checkpoint.schema.json",
+      "sha256": "4899f1fe08bd3d82ade6c5b1d59b11866805f2f360c569116e5a32b2fa143839",
+      "size": 1687
+    },
+    {
+      "path": "skills/dual-agent-pipeline/agents/openai.yaml",
+      "sha256": "879a736644a08624996c978b387f6fc66fe0bce1b642d267d978f7dbe77116ee",
+      "size": 234
+    },
+    {
+      "path": "skills/dual-agent-pipeline/references/mode_contract.md",
+      "sha256": "a8d5f059d180309ad9b12afbb452500632f7a5bb6b4d650654203603ee1c9b91",
+      "size": 3562
+    },
+    {
+      "path": "skills/dual-agent-pipeline/references/project_profile_contract.md",
+      "sha256": "c3ee5da8da64e573124ee8b1adc05f7fb0de019178ce371b32fc7d924311a69a",
+      "size": 2737
+    },
+    {
+      "path": "skills/dual-agent-pipeline/references/task_scope_examples.md",
+      "sha256": "9e28675907cb9b8ae0f337b67c9f45159ae62ca6debe7a72bb87dcd03ddffb35",
+      "size": 1215
+    },
+    {
+      "path": "skills/dual-agent-pipeline/scripts/dual_checkpoint.ps1",
+      "sha256": "4fe4ce20dd39721416294e4b5f85addd57667d4bc69a25f672aeb38f1f69351a",
+      "size": 387
+    },
+    {
+      "path": "skills/dual-agent-pipeline/scripts/dual_doctor.ps1",
+      "sha256": "990dc1a4d4975c0b9357bd6051df4f8366bdaf9efb0984385d66e0afc39dbf86",
+      "size": 203
+    },
+    {
+      "path": "skills/dual-agent-pipeline/scripts/dual_init.ps1",
+      "sha256": "1c120ed2c5836f241674169306d1cbb882ea6bb47b9dd5cb0df55065ce765031",
+      "size": 1001
+    },
+    {
+      "path": "skills/dual-agent-pipeline/scripts/dual_paths.ps1",
+      "sha256": "b7bcc3dd8f7b27a1f2433690c642a49833e8f5e0761abd25e3650bfd2b5ae327",
+      "size": 1979
+    },
+    {
+      "path": "skills/dual-agent-pipeline/scripts/dual_read_reports.ps1",
+      "sha256": "e5d50b8f0685c314ee8d6730a3709f764abebbd63137313282097871d41967d6",
+      "size": 1549
+    },
+    {
+      "path": "skills/dual-agent-pipeline/scripts/dual_run.ps1",
+      "sha256": "f44f96d53d8afeeebdfcd1917d6153bbd149cb3d5e55616a6530be454e2e5609",
+      "size": 962
+    },
+    {
+      "path": "skills/dual-agent-pipeline/scripts/dual_status.ps1",
+      "sha256": "1afc20da0a9f412aad2c6193aed94955b243a3a161d54008edebf1fd203cecb0",
+      "size": 3997
+    },
+    {
+      "path": "skills/dual-agent-pipeline/scripts/dual_wait.ps1",
+      "sha256": "ab3b4d8958b337995f2d1b62e27198684024aa69fcab49d666755cea0ce3c00e",
+      "size": 730
+    },
+    {
+      "path": "skills/dual-agent-pipeline/SKILL.md",
+      "sha256": "e45f362553f4cc96c4edc22d02ae177cce200a232a90d29a0a4040d2f1fb9ca0",
+      "size": 9485
+    },
+    {
+      "path": "skills/dual-agent/agents/openai.yaml",
+      "sha256": "34f185b28ea4f8202de4e45843365a0988445bfe8bf71da9b4c9d9200226e7ae",
+      "size": 247
+    },
+    {
+      "path": "skills/dual-agent/references/orchestration_contract.md",
+      "sha256": "efb883cafd2dfdc652cdc1d27e47bbe248a00172a931399ace11682988dc113e",
+      "size": 857
+    },
+    {
+      "path": "skills/dual-agent/scripts/dual_orchestrate.ps1",
+      "sha256": "6ee8dc477839181ca78b847018f46fb5f93d7c44477fa067b83b6f4076a7a527",
+      "size": 2005
+    },
+    {
+      "path": "skills/dual-agent/SKILL.md",
+      "sha256": "9ff250054a6b782300047ca68e4a59005663e0230dba4eee2d0b9083780dc579",
+      "size": 1305
+    },
+    {
+      "path": "workflow_governance.py",
+      "sha256": "34cc05dc5618f4dabe716a0953901fb430db1284d61e0c2d1080a3e1086a34de",
+      "size": 27932
+    }
+  ],
+  "managed_profiles": {
+    "factory": {
+      "auto_fix": false,
+      "convergence_v2": true,
+      "convergence_shadow": false,
+      "max_reviews_per_phase": 6,
+      "execution_policy": "checkpointed",
+      "review_boundaries": [
+        "RB-1",
+        "RB-2",
+        "RB-3"
+      ]
+    },
+    "RevitAddinSolution": {
+      "auto_fix": false,
+      "convergence_v2": true,
+      "convergence_shadow": false,
+      "max_reviews_per_phase": 6,
+      "execution_policy": "checkpointed",
+      "review_boundaries": [
+        "phase_completion",
+        "configured_milestone",
+        "p0_p1_blocker",
+        "scope_change",
+        "contract_regression"
+      ]
+    },
+    "NavisAddinSolution": {
+      "auto_fix": false,
+      "convergence_v2": true,
+      "convergence_shadow": false,
+      "max_reviews_per_phase": 6,
+      "execution_policy": "checkpointed",
+      "review_boundaries": [
+        "phase_completion",
+        "configured_milestone",
+        "p0_p1_blocker",
+        "scope_change",
+        "contract_regression"
+      ]
+    }
+  },
+  "manifest_sha256": "b13a123b066fc3d9003e41f8aebbf2521da19906b08c36f560096f321ccdb15f"
+}

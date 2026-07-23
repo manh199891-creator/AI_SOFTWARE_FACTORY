@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "run_id", "mode", "status", "artifact_files", "diagnostics"],
+  "properties": {
+    "schema_version": {"const": 1}, "run_id": {"type": "string"}, "mode": {"type": "string"},
+    "status": {"enum": ["PASS", "FAIL"]}, "created_at": {"type": "string"},
+    "artifact_files": {"type": "array", "items": {"type": "string"}}, "transport_budget": {"type": "integer"},
+    "diagnostics": {"type": "array", "items": {"type": "object", "required": ["rule_id", "file", "line", "evidence", "remediation", "severity"]}}
+  }, "additionalProperties": true
+}

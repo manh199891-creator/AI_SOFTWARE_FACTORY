@@ -1,0 +1,2 @@
+@echo off
+echo FAKE_CODEX_RUN_SUCCESS

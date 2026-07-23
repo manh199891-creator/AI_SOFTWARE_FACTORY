@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-07-22T04:17:35.429865+00:00",
+  "project_root": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution",
+  "topology": "single_writer_independent_verifier",
+  "writer": "antigravity",
+  "verifier": "codex",
+  "checks": [
+    {
+      "name": "codex",
+      "status": "READY",
+      "executable": "C:\\Users\\Admin\\AppData\\Local\\Programs\\OpenAI\\Codex\\bin\\codex.EXE",
+      "detail": "codex-cli 0.144.3"
+    },
+    {
+      "name": "antigravity",
+      "status": "AUTH_REQUIRED",
+      "executable": "C:\\Users\\Admin\\AppData\\Local\\agy\\bin\\agy.exe",
+      "detail": " code assist response: error getting token source: You are not logged into Antigravity.\nI0722 11:17:35.406552 28164 server.go:2579] State refresh took 2ms\nI0722 11:17:35.406552 28164 server.go:2589] [RemoteControl] Subscription callback triggered.\nI0722 11:17:35.406552 28164 server.go:2591] [RemoteControl] RemoteControlEnabled value: false\nI0722 11:17:35.406552 28164 server.go:2722] [RemoteControl] Resolved proxyServerURL: \"\"\nI0722 11:17:35.406552 28164 profiler.go:154] Continuous pprof profiling is disabled.\nI0722 11:17:35.406552 28164 server.go:2160] initialized server successfully in 33.6937ms\nW0722 11:17:35.407551 28164 auto_updater.go:198] Directory C:\\Users\\Admin\\AppData\\Local\\agy\\bin is not fully accessible (readable: true, writable: false), skipping update\nI0722 11:17:35.407551 28164 common.go:131] Launching CLI mode\nE0722 11:17:35.407551 28164 common.go:146] Failed to resolve GeminiDir \".gemini\": .gemini must be an absolute path: path is not absolute, falling back to default\nW0722 11:17:35.407551 28164 log_context.go:117] Cache(loadCodeAssistResponse): Singleflight refresh failed: error getting token source: You are not logged into Antigravity.\nE0722 11:17:35.407551 28164 log.go:398] error getting token source: You are not logged into Antigravity.\nI0722 11:17:35.407551 28164 common.go:177] CLI app data directory: C:\\Users\\Admin\\.gemini\\antigravity-cli\nI0722 11:17:35.407551 28164 server.go:237] Creating CLI server backend: product=antigravity workspaceDirs=[E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\source-code] appDataDir=C:\\Users\\Admin\\.gemini\\antigravity-cli cascadeManager=true codeAssist=true\nW0722 11:17:35.407551 28164 log_context.go:117] Cache(userInfo): Singleflight refresh failed: failed to get load code assist response: error getting token source: You are not logged into Antigravity.\nE0722 11:17:35.408597 28164 log.go:398] failed to get load code assist response: error getting token source: You are not logged into Antigravity.\nW0722 11:17:35.408597 28164 log_context.go:117] Cache(loadCodeAssistResponse): Singleflight refresh failed: error getting token source: You are not logged into Antigravity.\nE0722 11:17:35.408597 28164 log.go:398] error getting token source: You are not logged into Antigravity.\nW0722 11:17:35.408597 28164 log_context.go:117] Cache(userInfo): Singleflight refresh failed: failed to get load code assist response: error getting token source: You are not logged into Antigravity.\nE0722 11:17:35.408597 28164 log.go:398] failed to get load code assist response: error getting token source: You are not logged into Antigravity.\nI0722 11:17:35.410580 28164 server.go:1540] Backend project ID updated dynamically to: default-cli-project\nI0722 11:17:35.410580 28164 manager.go:332] Initializing CLI store manager for workspace E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\source-code\nI0722 11:17:35.411092 28164 cli_setting_manager.go:135] applyUserSettings: stored shared config permissions: allow=99 deny=0 ask=0 from C:\\Users\\Admin\\.gemini\\config\\config.json\nI0722 11:17:35.411092 28164 cli_setting_manager.go:820] Skipping telemetry propagation because user is not logged in\nI0722 11:17:35.411092 28164 cli_setting_manager.go:81] CLI settings initialized: permissions=<nil>, toolPermission=request-review\nI0722 11:17:35.412146 28164 hooks_manager.go:53] loaded 0 named hooks from 0 hooks.json file(s)\nI0722 11:17:35.412146 28164 manager.go:502] CLI store manager initialized successfully\nI0722 11:17:35.412146 28164 common.go:429] CLI store manager created successfully\nI0722 11:17:35.412146 28164 quota_manager.go:35] doRefreshQuota: skipped (not logged in)\nI0722 11:17:35.412146 28164 cli_setting_manager.go:199] ApplyProjectPermissionGrants: no grants for project \"CLI Project\", cleared project permissions\nFetching available models...\nI0722 11:17:35.413737 28164 server.go:2454] Language server shutting down\nI0722 11:17:35.413737 28164 server.go:2459] Waiting for migrations to complete to prevent partial migration state..."
+    }
+  ],
+  "ready": false,
+  "convergence": {
+    "schema_version": 2,
+    "generated_at": "2026-07-22T04:17:35.484178+00:00",
+    "authoritative_status": {
+      "status_version": 1,
+      "status": "INFRA_FAIL",
+      "task_id": "auto_foundation_cleanup_fix",
+      "mode": "code",
+      "run_id": "29a6bd4e-fffa-424e-b4d0-56b494521c4d",
+      "snapshot_hash": "9ead39e298b776438c9152f9ad3e9e67fc60f40688dcbb072af04947c3600256",
+      "previous_snapshot_hash": "9ead39e298b776438c9152f9ad3e9e67fc60f40688dcbb072af04947c3600256",
+      "reason_code": "MIGRATED_STALE_RUNNING_REVIEW",
+      "reason": "MIGRATED_STALE_RUNNING_REVIEW: incomplete historical review requires infrastructure recovery.",
+      "next_action": "recover_then_retry",
+      "updated_at": "2026-07-22T04:13:34.338154+00:00"
+    },
+    "latest_reviewer_run_id": "29a6bd4e-fffa-424e-b4d0-56b494521c4d",
+    "latest_handoff_run_id": "76f709ee-0221-4ce6-bf54-50d6cf4a491a",
+    "open_finding_families": [
+      "benchmark",
+      "general",
+      "lifecycle",
+      "schema",
+      "transport"
+    ],
+    "linter_status": "NOT_RUN",
+    "convergence_trend": [],
+    "configured_artifact_budget": 60000,
+    "actual_artifact_size": 1889,
+    "stale_report": false,
+    "current_snapshot_hash": "9ead39e298b776438c9152f9ad3e9e67fc60f40688dcbb072af04947c3600256",
+    "previous_snapshot_hash": "9ead39e298b776438c9152f9ad3e9e67fc60f40688dcbb072af04947c3600256",
+    "failure_budget": {
+      "used": 1,
+      "remaining": 2,
+      "limit": 3,
+      "reopen_count": 0
+    },
+    "contract_ledger_status": "NEEDS_HUMAN_SEED"
+  }
+}

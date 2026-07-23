@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "reviews"],
+  "properties": {
+    "schema_version": {"const": 1}, "updated_at": {"type": "string"},
+    "reviews": {"type": "array", "items": {"type": "object", "required": ["run_id", "snapshot_hash", "verified_resolved", "regressed", "newly_introduced", "net_closure", "decision", "reason_code"]}}
+  }, "additionalProperties": true
+}

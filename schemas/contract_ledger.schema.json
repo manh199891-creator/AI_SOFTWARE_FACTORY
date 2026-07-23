@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "contracts", "migrations"],
+  "properties": {
+    "schema_version": {"const": 1}, "created_at": {"type": "string"},
+    "contracts": {"type": "array", "items": {"type": "object", "required": ["contract_id", "family", "authoritative_section", "artifact", "required_elements", "source_snapshot", "status"]}},
+    "migrations": {"type": "array"}
+  }, "additionalProperties": true
+}

@@ -1,0 +1,165 @@
+{
+  "status_version": 2,
+  "status": "BLOCKED_HANDOFF",
+  "terminal": true,
+  "task_id": "incident_plan",
+  "mode": "plan",
+  "lifecycle_phase": "PLAN",
+  "review_kind": "none",
+  "review_boundary_id": null,
+  "run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
+  "snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
+  "previous_snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
+  "reason_code": "BLOCKED_HANDOFF",
+  "reason": "PHASE_REVIEW_BLOCKED: incident_plan/plan has 3 completed content failures; approve-phase-resume is required.",
+  "next_action": "root_cause_handoff",
+  "writer_status": "NOT_STARTED",
+  "writer_checkpoint_id": null,
+  "work_item_current": 0,
+  "work_item_total": 0,
+  "phase_review_count": 0,
+  "batch_review_count": 0,
+  "failure_budget_remaining": 0,
+  "ready_for_codex": false,
+  "history": [
+    {
+      "from": "NOT_STARTED",
+      "to": "RUNNING",
+      "at": "2026-07-22T10:35:45.731968+00:00",
+      "reason_code": "PIPELINE_STARTED"
+    },
+    {
+      "from": "RUNNING",
+      "to": "NEEDS_FIX",
+      "at": "2026-07-22T10:35:46.959193+00:00",
+      "reason_code": "REVIEW_CYCLE_COMPLETE"
+    },
+    {
+      "from": "NEEDS_FIX",
+      "to": "NEEDS_FIX",
+      "at": "2026-07-22T10:35:46.987831+00:00",
+      "reason_code": "REVIEW_CYCLE_COMPLETE"
+    },
+    {
+      "from": "NEEDS_FIX",
+      "to": "RUNNING",
+      "at": "2026-07-22T10:35:47.433420+00:00",
+      "reason_code": "PIPELINE_STARTED"
+    },
+    {
+      "from": "RUNNING",
+      "to": "NEEDS_FIX",
+      "at": "2026-07-22T10:35:47.806279+00:00",
+      "reason_code": "REVIEW_CYCLE_COMPLETE"
+    },
+    {
+      "from": "NEEDS_FIX",
+      "to": "NEEDS_FIX",
+      "at": "2026-07-22T10:35:47.873313+00:00",
+      "reason_code": "REVIEW_CYCLE_COMPLETE"
+    },
+    {
+      "from": "NEEDS_FIX",
+      "to": "RUNNING",
+      "at": "2026-07-22T10:35:48.361477+00:00",
+      "reason_code": "PIPELINE_STARTED"
+    },
+    {
+      "from": "RUNNING",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:48.744909+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:48.775442+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:49.043321+00:00",
+      "reason_code": "PHASE_REVIEW_BLOCKED"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:49.552994+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:49.882818+00:00",
+      "reason_code": "PHASE_REVIEW_BLOCKED"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:50.793584+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:51.076515+00:00",
+      "reason_code": "PHASE_REVIEW_BLOCKED"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:51.096521+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:51.312503+00:00",
+      "reason_code": "PHASE_REVIEW_BLOCKED"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:52.264110+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:52.569807+00:00",
+      "reason_code": "PHASE_REVIEW_BLOCKED"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:52.597982+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:52.844477+00:00",
+      "reason_code": "PHASE_REVIEW_BLOCKED"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:53.749703+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:54.021953+00:00",
+      "reason_code": "PHASE_REVIEW_BLOCKED"
+    },
+    {
+      "from": "BLOCKED_HANDOFF",
+      "to": "BLOCKED_HANDOFF",
+      "at": "2026-07-22T10:35:54.882754+00:00",
+      "reason_code": "BLOCKED_HANDOFF"
+    }
+  ],
+  "updated_at": "2026-07-22T10:35:54.882754+00:00"
+}

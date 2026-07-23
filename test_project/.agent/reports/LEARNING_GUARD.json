@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-22T10:35:48.453048+00:00",
+  "task_id": "incident_plan",
+  "feature": "Test dual",
+  "mode": "plan",
+  "source_count": 5,
+  "matched_rule_count": 0,
+  "rules": [],
+  "recent_outcomes": [
+    {
+      "status": "NEEDS_FIX",
+      "mode": "plan",
+      "reason": "REVIEW_CYCLE_COMPLETE: plan review found issues; edit the snapshot before another review."
+    },
+    {
+      "status": "NEEDS_FIX",
+      "mode": "plan",
+      "reason": "REVIEW_CYCLE_COMPLETE: plan review found issues; edit the snapshot before another review."
+    }
+  ],
+  "token_policy": {
+    "strategy": "compact_index_first",
+    "max_context_chars": 4000,
+    "full_memory_loaded_by_default": false
+  }
+}

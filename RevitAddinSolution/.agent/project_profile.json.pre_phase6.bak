@@ -1,0 +1,32 @@
+{
+  "project_id": "revit_addin",
+  "project_type": "dotnet_revit_addin",
+  "source_path": "source-code",
+  "build_command": "\"C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\MSBuild\\Current\\Bin\\MSBuild.exe\" Antigravity.sln /t:Build /p:Configuration=Debug /v:minimal",
+  "test_command": "dotnet test source-code/tests/Antigravity.HoanThien.Tests/Antigravity.HoanThien.Tests.csproj --arch x64 --logger \"trx;LogFileName=TestResults.trx\"",
+  "lint_command": "",
+  "stage_patterns": ["src/**/*.cs", "src/**/*.xaml", "src/**/*.csproj", "tests/**/*.cs", "tests/**/*.csproj"],
+  "dual_forbidden": ["bin/**", "obj/**", ".agent/**"],
+  "fixer_command": "",
+  "codex_review": {
+    "timeout_seconds": 180,
+    "max_diff_chars": 60000,
+    "max_file_chars": 40000,
+    "batch_max_files": 3,
+    "batch_max_chars": 70000,
+    "max_timeout_retries": 2
+  },
+  "runtime_validation": {
+    "required_for_gate": false,
+    "type": "ricaun_revit_test",
+    "test_assembly": "tests/Antigravity.HoanThien.Tests/bin/Debug/net48/win-x64/Antigravity.HoanThien.Tests.dll",
+    "report": ".agent/reports/QA_RUNTIME_REPORT.md"
+  },
+  "release_requires": {
+    "build_pass": true,
+    "qa_pass": true,
+    "codex_real_review_pass": true,
+    "diff_hash_match": true,
+    "runtime_validation_pass": true
+  }
+}
