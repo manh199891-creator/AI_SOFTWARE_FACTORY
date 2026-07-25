@@ -1,0 +1,529 @@
+{
+  "task_id": "auto_foundation_cleanup_fix",
+  "phase": "code",
+  "status": "TASK_COMPLETE",
+  "ready_for_codex": true,
+  "work_item_current": 2,
+  "work_item_total": 2,
+  "snapshot_hash": "e2401fff624adb34bd067eb175a89944dfdb3cc377dc69a765b9a5e4f59a5e61",
+  "changed_files": [],
+  "checks": [
+    {
+      "name": "Build",
+      "status": "PASS",
+      "evidence": "sln built successfully"
+    }
+  ],
+  "finding_claims": [
+    {
+      "finding_id": "benchmark.accepts.adjacent.all.another.antigravity.arbitrary",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "benchmark.accepts.antigravity.any.area.bounding.box",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "benchmark.after.also.antigravity.any.averaging.biased",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "benchmark.metric-formula",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.000.001.5000.accepts.align.antigravity",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.000.002.009.011.across.after",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.000.across.although.antigravity.applied.applies",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.000.add.antigravity.appear.before.bound",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.0002.0049.0051.antigravity.average.averages",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.00049.00051.001.actual.all.antigravity",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.001.added.antigravity.apart.append.between",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.001.all.another.antigravity.autofoundationcommand.base",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.009.018.adjacent.all.antigravity.become",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.2024.2025.abstraction.actual.added.also",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.304.after.antigravity.autofoundationcommand.below.causing",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.360.algorithm.all.already.also.applied",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.500.all.antigravity.any.arbitrary.based",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.abort.add.another.antigravity.any.back",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.aborting.aborts.all.antigravity.being.but",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.aborting.accepts.antigravity.arbitrary.axes.basisz",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.above.accepted.adds.antigravity.avgz.basis",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.above.all.antigravity.any.average.based",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.absent.antigravity.any.arbitrary.autofoundationcommand.before",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.absent.antigravity.auto.automatic.behavior.broken",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.absent.antigravity.auto.behavior.cad.callable",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.absolute.angles.angular.antigravity.appropriate.both",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accept.accepted.accepting.adjacent.after.antigravity",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accept.antigravity.append.assembled.buildloops.but",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accept.antigravity.assigned.average.before.but",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.acceptance.accepts.already.antigravity.api.automatically",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.acceptance.actions.add.behavior.build.cannot",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.acceptance.adapter.antigravity.automatically.because.behavior",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.acceptance.additional.antigravity.behavior.but.cannot",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.acceptance.addresses.antigravity.api.attempts.batch",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.acceptance.algorithm.applied.behavior.bot.built",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.acceptance.auto.behavior.boundary.cases.circular",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepted.accepts.add.already.antigravity.auto",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepted.adapter.all.antigravity.before.boundary",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepted.added.after.against.all.also",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepted.adding.adds.again.already.also",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepted.aligned.antigravity.any.approximations.before",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepted.also.annotation.antigravity.arbitrary.area",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepted.antigravity.applicable.cad.cadparserservice.closed",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepted.antigravity.but.cad.cadparserservice.calculates",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepts.adapter.added.after.already.antigravity",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepts.antigravity.applied.autofoundationcommand.become.before",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accepts.antigravity.but.cadparserservice.closed.collinear",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accompanying.actually.adapter.antigravity.committed.discovered",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.accumulate.adding.again.already.antigravity.applied",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.across.allowing.anchored.antigravity.any.both",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.across.antigravity.apart.axes.axis.branch",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.active.another.antigravity.associated.association.autofoundationcommand",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.active.antigravity.arbitrary.assigned.association.autofoundationcommand",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.activeview.antigravity.appropriate.arbitrary.associated.autofoundationcommand",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.actual.adapters.add.all.antigravity.assert",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.actual.after.antigravity.assignment.atomic.autofoundationcommand",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.actual.antigravity.autofoundationcommand.before.cad.can",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.add.already.antigravity.argumentnullexception.boundary",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.added.all.antigravity.arguments.behavior",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.added.all.antigravity.behavior.cadparserservicetests",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.added.antigravity.batch.behavior.cadparserservice",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.after.antigravity.assert.asserts.called",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.against.antigravity.api.attempt.before",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.all.antigravity.behavior.cadparserservicetests.calls",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.antigravity.any.before.boundary.cad",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.adapter.antigravity.applied.autofoundationcommand.base.boolean",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.add.algorithm.allocation.already.antigravity.application",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.add.aligned.always.angle.antigravity.any",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.add.allowing.antigravity.applicable.both.cad",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.add.assembly.change.changes.command.composition",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.added.another.antigravity.batch.cad.cadparserservicetests",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.affect.before.block.boundaries.cad.calculation",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.after.all.antigravity.autofoundationcommand.back.before",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.after.already.antigravity.assert.based.bases",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.after.another.antigravity.appends.auxiliary.before",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.after.antigravity.applied.before.build.cad",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.after.antigravity.appropriate.arbitrary.boundary.bounded",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.after.antigravity.autofoundationcommand.available.before.begins",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.algorithm.antigravity.backtracking.based.branch.buildloops",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.aligned.always.angle.antigravity.assigned.axis",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.all.also.antigravity.assigned.average.belonging",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.all.antigravity.appropriate.arbitrarily.autofoundationcommand.cad",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.already.antigravity.applied.cad.cadlink.cadparserservice",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.also.ambiguous.antigravity.applicable.autofoundationcommand.built",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.also.antigravity.any.appropriate.cadparserservice.can",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.also.antigravity.arbitrary.block.blocks.cad",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.also.antigravity.auto.behavior.cad.cadparserservice",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.ambiguous.antigravity.arbitrary.autofoundationcommand.before.built",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.annotation.another.antigravity.any.automatic.belongs",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.api.auto.backup.behavior.cad",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.arbitrary.autofoundationcommand.base.cad.can",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.arbitrary.autofoundationcommand.based.but.can",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.area.before.bounding.box.cad",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.assignment.autofoundationcommand.build.cannot.commands",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.assigns.autofoundationcommand.back.before.but",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.associate.cad.can.checked.consequently",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.associating.autofoundationcommand.behavior.below.between",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.auto.automatically.behavior.cad.cannot",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.autodesk.autofoundationcommand.cancellation.cancelled.catch",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.autofoundationcommand.before.but.can.clear",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.autofoundationcommand.behavior.both.but.cannot",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.because.both.boundary.bounded.buildloops",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.behavior.boundaries.but.cad.cadparserservice",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.but.cad.cadparserservice.calculates.checks",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.antigravity.cad.cadparserservice.closed.collect.command",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.backing.break.change.changes.concrete.covering",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "general.gold-set-reproducibility",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "lifecycle.abort.access.activate.activation.adapter.all",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "lifecycle.acceptance.activation.all.based.behavior.can",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "lifecycle.rollback-retention",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "lifecycle.scope-ownership",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.abort.antigravity.both.cad.can.case",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.aborts.all.antigravity.batch.being.but",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.abstractions.adapter.add.antigravity.api.assembly",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.add.affects.aligned.angle.antigravity.asserted",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.affected.antigravity.app.assembly.but.cadparserservice",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.antigravity.approved.autofoundationcommand.before.cad.can",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.antigravity.ascending.associated.below.can.candidate",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.schema-consistency",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "schema.scope-ownership",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "transport.absolute.accepts.antigravity.antiparallel.bounding.box",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "transport.added.adds.algorithm.antigravity.auto.behavior",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "transport.adjacency.alternative.antigravity.backtracking.because.bounded",
+      "evidence": "Resolved"
+    },
+    {
+      "finding_id": "transport.antigravity.before.cad.cadparserservice.closed.components",
+      "evidence": "Resolved"
+    }
+  ],
+  "blockers": [],
+  "risks": [],
+  "retry_hypothesis": "None",
+  "schema_version": 1,
+  "checkpoint_id": "338616d8-9ee8-4cf7-9c1f-967adff3cb17",
+  "latest_review_run_id": "29a6bd4e-fffa-424e-b4d0-56b494521c4d",
+  "reservation": {
+    "state": "CONSUMED",
+    "run_id": "8b580489-ab57-4007-87d0-88c9c4a13f4e",
+    "review_kind": "checkpoint",
+    "review_boundary_id": null,
+    "updated_at": "2026-07-23T05:06:56.104311+00:00"
+  },
+  "recorded_at": "2026-07-23T05:01:31.875234+00:00"
+}

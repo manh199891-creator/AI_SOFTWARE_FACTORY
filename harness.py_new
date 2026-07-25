@@ -2449,13 +2449,12 @@ def cmd_writer_checkpoint(project_name, project_root):
     if mode in {"research", "plan"}:
         snapshot_hash, _ = get_artifact_snapshot(project_root, mode, scope.get("artifact_files", DEFAULT_MODE_ARTIFACTS[mode]))
     else:
-        profile = json.loads((project_root / ".agent/project_profile.json").read_text(encoding="utf-8"))
-        if profile.get("dual_agents", {}).get("convergence_v2", False):
-            from review_pipeline import evaluate_task_scope
-            ev = evaluate_task_scope(resolve_source_root(project_root), project_root / ".agent/context/TASK_SCOPE.json", project_root / ".agent/state/task_baseline.json", expected_task_id=payload.get("task_id", ""))
-            snapshot_hash = ev["snapshot_hash"]
-        else:
-            snapshot_hash, _ = get_deterministic_snapshot(resolve_source_root(project_root))
+        if True:
+        snapshot_hash, _ = get_deterministic_snapshot(resolve_source_root(project_root))
+        profile = load_profile(project_root)
+        if profile.get(dual_agents, {}).get(convergence_v2, False):
+            ev = evaluate_task_scope(resolve_source_root(project_root), project_root / .agent/context/TASK_SCOPE.json, project_root / .agent/state/task_baseline.json, expected_task_id=checkpoint.get(task_id) if checkpoint in locals() else ")
+ snapshot_hash = ev[snapshot_hash]
     checkpoint = record_writer_checkpoint(project_root, payload, snapshot_hash)
     failure = context.get("failure_budget", {})
     authority = write_pipeline_status(

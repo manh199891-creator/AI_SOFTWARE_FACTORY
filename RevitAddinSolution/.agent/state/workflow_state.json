@@ -9,7 +9,7 @@
   "codex_status": "infra_fail",
   "retry_count": 1,
   "max_retry": 5,
-  "next_step": "review_recovery",
+  "next_step": "blocked",
   "artifacts": {
     "project_context": ".agent/context/PROJECT_CONTEXT.md",
     "plan": ".agent/context/PLAN.md",
@@ -27,7 +27,6 @@
     "pr_description": ".agent/reports/PR_DESCRIPTION.md",
     "release_notes": ".agent/reports/RELEASE_NOTES.md"
   },
-  "dual_status": "stale",
-  "dual_mode": "FOCUSED_RETRY",
-  "dual_reason": "Review heartbeat expired after 50965s; run terminalized as STALE."
+  "dual_status": "running",
+  "dual_mode": "code"
 }

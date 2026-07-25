@@ -23,8 +23,8 @@
     },
     {
       "path": "harness.py",
-      "sha256": "a9b510510a1f42627654b1c21c05af97a7545e19d57145182b8ad978544882ce",
-      "size": 118491
+      "sha256": "b12da3d7626dfccc5997991586ae53cfc705c3297446b2e8ad706ed973a9b06c",
+      "size": 124076
     },
     {
       "path": "learning_guard.py",
@@ -43,8 +43,8 @@
     },
     {
       "path": "RevitAddinSolution/.agent/project_profile.json",
-      "sha256": "74407350c73ab5787cf7f78e8df15b036a2a6be084f1f3c7f96940911a1d6c54",
-      "size": 2779
+      "sha256": "ebd6688c5dc7096d417bd4e5eb026d303ede0a11b34563eda1dbb2b001a64fb9",
+      "size": 2991
     },
     {
       "path": "runtime_integrity.py",
@@ -203,8 +203,8 @@
     },
     {
       "path": "workflow_governance.py",
-      "sha256": "34cc05dc5618f4dabe716a0953901fb430db1284d61e0c2d1080a3e1086a34de",
-      "size": 27932
+      "sha256": "adeea381f88c8dd3ca77be3e982a26766559abbe571bf3e4351506aaab6e2825",
+      "size": 37388
     }
   ],
   "managed_profiles": {
@@ -249,5 +249,5 @@
       ]
     }
   },
-  "manifest_sha256": "b13a123b066fc3d9003e41f8aebbf2521da19906b08c36f560096f321ccdb15f"
+  "manifest_sha256": "4ef8284c01f9b8f32cbce067f040b1c1413c8167363a28e111995560fe0f4ae9"
 }

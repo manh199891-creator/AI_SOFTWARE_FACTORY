@@ -2,10 +2,10 @@
 
 ## Status: PASS
 - task_id: auto_foundation_cleanup_fix
-- mode: release
-- generated_at: 2026-07-21T09:03:30.098879+00:00
-- source_count: 29
-- matched_rule_count: 4
+- mode: code
+- generated_at: 2026-07-23T05:02:56.345671+00:00
+- source_count: 34
+- matched_rule_count: 5
 
 ## Token Strategy
 - Agents read `.agent/context/MEMORY_CONTEXT.md` by default.
@@ -18,5 +18,7 @@
   source: `E:\AI_SOFTWARE_FACTORY\RevitAddinSolution\.agent\knowledge\memory\bugs\auto_column.md`
 - **review_batch_context_split** [P2] hits=2: Keep related production, project, and test files together in review context where possible.
   source: `E:\AI_SOFTWARE_FACTORY\RevitAddinSolution\.agent\reports\CODEX_REVIEW.md`
-- **codex_sandbox_degraded** [P3] hits=2: Treat sandbox helper errors as a diagnostic warning unless Codex cannot return a valid review contract.
+- **codex_sandbox_degraded** [P3] hits=1: Treat sandbox helper errors as a diagnostic warning unless Codex cannot return a valid review contract.
   source: `E:\AI_SOFTWARE_FACTORY\RevitAddinSolution\.agent\reports\CODEX_REVIEW.md`
+- **antigravity_auth_or_fixer** [P2] hits=1: Run doctor before auto-fix. If Antigravity is not READY, write handoff and stop instead of claiming fixer progress.
+  source: `E:\AI_SOFTWARE_FACTORY\RevitAddinSolution\.agent\reports\DUAL_AGENT_DOCTOR.json`

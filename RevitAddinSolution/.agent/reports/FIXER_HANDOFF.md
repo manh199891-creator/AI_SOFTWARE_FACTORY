@@ -4,7 +4,7 @@
 - task_id: auto_foundation_cleanup_fix
 - feature: Cleanup AutoFoundation scope and encoding issues
 - cycle: 1
-- reason: Review failed with 7 findings.
+- reason: WRITER_CHECKPOINT_REQUIRED: WRITER_CHECKPOINT_REQUIRED
 
 ## Instructions For Antigravity Fixer
 
@@ -18,9 +18,11 @@ Read these files:
 6. `.agent/context/TASK_SCOPE.json`
 
 Fix only the issues listed by Codex and only within `TASK_SCOPE.json`.
-
-After fixing, run:
-
-```powershell
-python E:\AI_SOFTWARE_FACTORY\harness.py RevitAddinSolution dual --task-id auto_foundation_cleanup_fix --feature "Cleanup AutoFoundation scope and encoding issues" --mode code
-```
+Fix all findings in one coherent pass. Preserve previously established security,
+benchmark, rollback, and traceability contracts. Do not delete substantive sections
+merely to reduce file size or fit a presumed context limit.
+Do not invoke Codex or rerun the dual pipeline. The harness owns the next review.
+Finish by reporting changed files, checks run, remaining risks, and a falsifiable retry hypothesis.
+Write `.agent/context/WRITER_CHECKPOINT_REQUEST.json` using `writer_checkpoint.schema.json`, then run:
+`powershell -NoProfile -ExecutionPolicy Bypass -File .agents/skills/dual-agent-pipeline/scripts/dual_checkpoint.ps1 -Project RevitAddinSolution`.
+Do not write `.agent/state/writer_checkpoint.json` directly.

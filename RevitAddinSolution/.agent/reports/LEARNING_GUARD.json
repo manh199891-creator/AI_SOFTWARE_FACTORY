@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-21T09:03:30.098879+00:00",
+  "generated_at": "2026-07-23T05:02:56.345671+00:00",
   "task_id": "auto_foundation_cleanup_fix",
-  "feature": "Dual Agent Pipeline",
-  "mode": "release",
-  "source_count": 29,
-  "matched_rule_count": 4,
+  "feature": "## Task",
+  "mode": "code",
+  "source_count": 34,
+  "matched_rule_count": 5,
   "rules": [
     {
       "id": "dirty_baseline_or_scope",
@@ -31,37 +31,19 @@
     {
       "id": "codex_sandbox_degraded",
       "severity": "P3",
-      "count": 2,
+      "count": 1,
       "prevention": "Treat sandbox helper errors as a diagnostic warning unless Codex cannot return a valid review contract.",
       "example_source": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\.agent\\reports\\CODEX_REVIEW.md"
+    },
+    {
+      "id": "antigravity_auth_or_fixer",
+      "severity": "P2",
+      "count": 1,
+      "prevention": "Run doctor before auto-fix. If Antigravity is not READY, write handoff and stop instead of claiming fixer progress.",
+      "example_source": "E:\\AI_SOFTWARE_FACTORY\\RevitAddinSolution\\.agent\\reports\\DUAL_AGENT_DOCTOR.json"
     }
   ],
   "recent_outcomes": [
-    {
-      "status": "BLOCKED",
-      "mode": "code",
-      "reason": "Guardrails failed"
-    },
-    {
-      "status": "BLOCKED",
-      "mode": "code",
-      "reason": "Guardrails failed"
-    },
-    {
-      "status": "BLOCKED",
-      "mode": "code",
-      "reason": "Guardrails failed"
-    },
-    {
-      "status": "BLOCKED",
-      "mode": "code",
-      "reason": "Guardrails failed"
-    },
-    {
-      "status": "BLOCKED",
-      "mode": "code",
-      "reason": "BLOCKED"
-    },
     {
       "status": "BLOCKED_VERIFY",
       "mode": "code",
@@ -76,6 +58,31 @@
       "status": "BLOCKED",
       "mode": "release",
       "reason": "TASK_SCOPE.json mode mismatch. Expected release, found code"
+    },
+    {
+      "status": "INFRA_FAIL",
+      "mode": "code",
+      "reason": "MIGRATED_STALE_RUNNING_REVIEW: incomplete historical review requires infrastructure recovery."
+    },
+    {
+      "status": "BLOCKED_VERIFY",
+      "mode": "code",
+      "reason": "Required verification failed"
+    },
+    {
+      "status": "NEEDS_FIX",
+      "mode": "code",
+      "reason": "Guardrails failed"
+    },
+    {
+      "status": "NEEDS_FIX",
+      "mode": "code",
+      "reason": "WRITER_CHECKPOINT_REQUIRED: WRITER_CHECKPOINT_REQUIRED"
+    },
+    {
+      "status": "NEEDS_FIX",
+      "mode": "code",
+      "reason": "Forbidden pipeline transition: READY_FOR_REVIEW -> RUNNING"
     }
   ],
   "token_policy": {

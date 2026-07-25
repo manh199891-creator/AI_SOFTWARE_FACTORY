@@ -1,34 +1,34 @@
 {
   "schema_version": 1,
-  "run_id": "aa381a59-6b47-440c-88af-47b92dd0fbfe",
+  "run_id": "c14ab963-a5fa-4556-a46a-ffe6e5a421cc",
   "task_id": "auto_foundation_cleanup_fix",
-  "created_at": "2026-07-21T10:08:10.721657+00:00",
-  "snapshot_before": "26b450ab9d1262e8b91baada0f47e9aafd1a45e66cf883158034083e15389324",
-  "snapshot_after": "26b450ab9d1262e8b91baada0f47e9aafd1a45e66cf883158034083e15389324",
+  "created_at": "2026-07-23T04:51:50.780408+00:00",
+  "snapshot_before": "e2401fff624adb34bd067eb175a89944dfdb3cc377dc69a765b9a5e4f59a5e61",
+  "snapshot_after": "e2401fff624adb34bd067eb175a89944dfdb3cc377dc69a765b9a5e4f59a5e61",
   "fresh": true,
   "status": "PASS",
   "results": [
     {
       "stage": "build",
-      "command": "\"C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\MSBuild\\Current\\Bin\\MSBuild.exe\" src/Antigravity.Core/Antigravity.Core.csproj /t:Build /p:Configuration=Debug /v:minimal",
+      "command": "\"C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\MSBuild\\Current\\Bin\\MSBuild.exe\" Antigravity.sln /t:Build /p:Configuration=Debug /v:minimal",
       "required": true,
       "status": "PASS",
       "exit_code": 0,
-      "started_at": "2026-07-21T17:08:02.600972+07:00",
-      "completed_at": "2026-07-21T17:08:04.901341+07:00",
+      "started_at": "2026-07-23T11:51:29.626453+07:00",
+      "completed_at": "2026-07-23T11:51:44.155743+07:00",
       "report": ".agent/reports/BUILD_REPORT.md",
-      "output_sha256": "c087750cef9f4d90a7594ed0b38266bce93a235c491f574f6775f47a3cc95700"
+      "output_sha256": "285bc01156f8db1a38da8122646538e485190f45b92d71e0db4f57f35a75f736"
     },
     {
       "stage": "test",
-      "command": "dotnet test tests/Antigravity.Core.Geometry.Tests/Antigravity.Core.Geometry.Tests.csproj --no-restore",
+      "command": "dotnet test tests\\\\Antigravity.Core.Geometry.Tests\\\\Antigravity.Core.Geometry.Tests.csproj --no-restore",
       "required": true,
       "status": "PASS",
       "exit_code": 0,
-      "started_at": "2026-07-21T17:08:04.901341+07:00",
-      "completed_at": "2026-07-21T17:08:10.638631+07:00",
+      "started_at": "2026-07-23T11:51:44.155743+07:00",
+      "completed_at": "2026-07-23T11:51:49.042840+07:00",
       "report": ".agent/reports/TEST_REPORT.md",
-      "output_sha256": "b6c103f3bba5600a76b4c35517a62ee8d224688fabf289a9395911a9136e2cdd"
+      "output_sha256": "8fdcd95a37b9fe6f0a477251ec0601f51751d27d679735bb566c47143fae3c79"
     },
     {
       "stage": "lint",
@@ -36,8 +36,8 @@
       "required": false,
       "status": "N/A",
       "exit_code": null,
-      "started_at": "2026-07-21T17:08:10.638631+07:00",
-      "completed_at": "2026-07-21T17:08:10.640137+07:00",
+      "started_at": "2026-07-23T11:51:49.042840+07:00",
+      "completed_at": "2026-07-23T11:51:49.043845+07:00",
       "report": ".agent/reports/LINT_REPORT.md",
       "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
