@@ -1,8 +1,8 @@
-# TECHNICAL_DESIGN.md - incident_plan
+# TECHNICAL_DESIGN.md - transition_test
 
 ## Feature
 
-Incident containment
+transition smoke
 
 ## Scope
 

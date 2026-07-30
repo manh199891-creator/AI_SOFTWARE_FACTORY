@@ -1,17 +1,18 @@
 {
   "schema_version": 1,
-  "task_id": "incident_plan",
-  "mode": "plan",
+  "task_id": "transition_test",
+  "mode": "code",
   "repository_root": "E:\\AI_SOFTWARE_FACTORY\\test_project\\source-code",
   "allowed_files": [
-    "**/*"
+    "file1.txt"
   ],
   "forbidden": [
     ".git/**",
     ".agent/state/**",
     ".agent/reports/**",
     "bin/**",
-    "obj/**"
+    "obj/**",
+    "protected/**"
   ],
   "artifact_files": [
     "PLAN.md",

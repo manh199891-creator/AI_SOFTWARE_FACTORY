@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
-  "task_id": "incident_plan",
+  "task_id": "transition_test",
   "project": "test_project",
-  "feature": "Test dual",
-  "mode": "plan",
-  "lifecycle_phase": "plan",
+  "feature": "transition smoke",
+  "mode": "code",
+  "lifecycle_phase": "code",
   "execution_policy": "checkpointed",
   "work_item_current": 0,
   "work_item_total": 0,
-  "status": "blocked_handoff",
-  "resume_cursor": "root_cause_handoff",
-  "created_at": "2026-07-22T10:35:45.353384+00:00",
-  "updated_at": "2026-07-22T10:35:48.735907+00:00",
+  "status": "initialized",
+  "resume_cursor": "scope_ready",
+  "created_at": "2026-07-30T04:36:48.314155+00:00",
+  "updated_at": "2026-07-30T04:36:48.314155+00:00",
   "repository_snapshot": {
     "hash": "d411d8900857f5a855e28d12cd2e73b8b595e916df372a38623b1800edfbe611",
     "files": [
@@ -21,14 +21,15 @@
   },
   "scope": {
     "allowed_files": [
-      "**/*"
+      "file1.txt"
     ],
     "forbidden": [
       ".git/**",
       ".agent/state/**",
       ".agent/reports/**",
       "bin/**",
-      "obj/**"
+      "obj/**",
+      "protected/**"
     ],
     "artifact_files": [
       "PLAN.md",
@@ -53,176 +54,26 @@
   "evidence": [],
   "failure_budget": {
     "limit": 3,
-    "used": 3,
-    "remaining": 0,
-    "failed_attempts": [
-      {
-        "at": "2026-07-22T10:35:46.942492+00:00",
-        "stage": "plan_review",
-        "hypothesis": "Fix plan defect 1",
-        "evidence": "Review found issues.",
-        "run_id": "be606d87-a92b-4f86-a0f7-fdb7496781e6",
-        "snapshot_hash": "efe51cb7de07178170efa8b09c623cb8f3dea1d533a229eaeee307fbcd70e46b",
-        "fingerprint": "e8c2a0ce891f85c2"
-      },
-      {
-        "at": "2026-07-22T10:35:47.785221+00:00",
-        "stage": "plan_review",
-        "hypothesis": "Fix plan defect 2",
-        "evidence": "Review found issues.",
-        "run_id": "c62f81e2-ff55-4e8c-9525-459e61e82ac9",
-        "snapshot_hash": "f39084da5b03cad3fdeacab29def5c44b0fc35fd6cc6bb3472be22d30df5cf1c",
-        "fingerprint": "1a3a169dcbc0b4a0"
-      },
-      {
-        "at": "2026-07-22T10:35:48.735907+00:00",
-        "stage": "plan_review",
-        "hypothesis": "Fix plan defect 3",
-        "evidence": "Review found issues.",
-        "run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
-        "snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
-        "fingerprint": "d90bdb31750e8f48"
-      }
-    ]
+    "used": 0,
+    "remaining": 3,
+    "failed_attempts": []
   },
   "review_attempts_by_phase": {
-    "incident_plan": {
-      "plan": {
-        "completed_content_failures": 3,
-        "content_failures": [
-          {
-            "run_id": "be606d87-a92b-4f86-a0f7-fdb7496781e6",
-            "snapshot_hash": "efe51cb7de07178170efa8b09c623cb8f3dea1d533a229eaeee307fbcd70e46b",
-            "status": "FAIL",
-            "recorded_at": "2026-07-22T10:35:46.922486+00:00"
-          },
-          {
-            "run_id": "c62f81e2-ff55-4e8c-9525-459e61e82ac9",
-            "snapshot_hash": "f39084da5b03cad3fdeacab29def5c44b0fc35fd6cc6bb3472be22d30df5cf1c",
-            "status": "FAIL",
-            "recorded_at": "2026-07-22T10:35:47.761210+00:00"
-          },
-          {
-            "run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
-            "snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
-            "status": "FAIL",
-            "recorded_at": "2026-07-22T10:35:48.718902+00:00"
-          }
-        ],
-        "outcomes": [
-          {
-            "run_id": "be606d87-a92b-4f86-a0f7-fdb7496781e6",
-            "snapshot_hash": "efe51cb7de07178170efa8b09c623cb8f3dea1d533a229eaeee307fbcd70e46b",
-            "status": "FAIL",
-            "recorded_at": "2026-07-22T10:35:46.922486+00:00"
-          },
-          {
-            "run_id": "c62f81e2-ff55-4e8c-9525-459e61e82ac9",
-            "snapshot_hash": "f39084da5b03cad3fdeacab29def5c44b0fc35fd6cc6bb3472be22d30df5cf1c",
-            "status": "FAIL",
-            "recorded_at": "2026-07-22T10:35:47.761210+00:00"
-          },
-          {
-            "run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
-            "snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
-            "status": "FAIL",
-            "recorded_at": "2026-07-22T10:35:48.718902+00:00"
-          }
-        ],
+    "transition_test": {
+      "code": {
+        "completed_content_failures": 0,
+        "content_failures": [],
+        "outcomes": [],
         "approvals": [],
-        "authorizations": [
-          {
-            "authorization_id": "593855ec-cb88-4a62-8a08-7cfba340ef7c",
-            "task_id": "incident_plan",
-            "mode": "plan",
-            "snapshot_hash": "efe51cb7de07178170efa8b09c623cb8f3dea1d533a229eaeee307fbcd70e46b",
-            "invocation_id": "72112138-e05a-4803-bf93-30a6a69f19fe",
-            "content_failures_before": 0,
-            "approval_id": null,
-            "authorized_at": "2026-07-22T10:35:46.706237+00:00",
-            "terminal_status": "FAIL",
-            "terminal_run_id": "be606d87-a92b-4f86-a0f7-fdb7496781e6",
-            "terminal_snapshot_hash": "efe51cb7de07178170efa8b09c623cb8f3dea1d533a229eaeee307fbcd70e46b",
-            "completed_at": "2026-07-22T10:35:46.922486+00:00"
-          },
-          {
-            "authorization_id": "ec71f1a2-23d8-41f6-ac61-db001a11aba3",
-            "task_id": "incident_plan",
-            "mode": "plan",
-            "snapshot_hash": "f39084da5b03cad3fdeacab29def5c44b0fc35fd6cc6bb3472be22d30df5cf1c",
-            "invocation_id": "adc21053-412e-46a7-93e8-04d91f2f276e",
-            "content_failures_before": 1,
-            "approval_id": null,
-            "authorized_at": "2026-07-22T10:35:47.499462+00:00",
-            "terminal_status": "FAIL",
-            "terminal_run_id": "c62f81e2-ff55-4e8c-9525-459e61e82ac9",
-            "terminal_snapshot_hash": "f39084da5b03cad3fdeacab29def5c44b0fc35fd6cc6bb3472be22d30df5cf1c",
-            "completed_at": "2026-07-22T10:35:47.761210+00:00"
-          },
-          {
-            "authorization_id": "3d0e3431-eef9-4567-910e-76230691b669",
-            "task_id": "incident_plan",
-            "mode": "plan",
-            "snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
-            "invocation_id": "1208fba2-4403-43d1-bc8a-838e68d20e56",
-            "content_failures_before": 2,
-            "approval_id": null,
-            "authorized_at": "2026-07-22T10:35:48.450043+00:00",
-            "terminal_status": "FAIL",
-            "terminal_run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
-            "terminal_snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
-            "completed_at": "2026-07-22T10:35:48.718902+00:00"
-          }
-        ]
+        "authorizations": []
       }
     }
   },
   "events": [
     {
-      "at": "2026-07-22T10:35:45.353384+00:00",
+      "at": "2026-07-30T04:36:48.314155+00:00",
       "type": "initialized",
       "detail": "Task context created"
-    },
-    {
-      "at": "2026-07-22T10:35:45.720960+00:00",
-      "type": "context_refreshed",
-      "detail": "Mode set to plan"
-    },
-    {
-      "at": "2026-07-22T10:35:45.730968+00:00",
-      "type": "pipeline_started",
-      "detail": "Dual pipeline started in plan mode; learning guard matched 0 rules"
-    },
-    {
-      "at": "2026-07-22T10:35:46.993831+00:00",
-      "type": "external_fixer_requested",
-      "detail": "REVIEW_CYCLE_COMPLETE: plan review found issues; edit the snapshot before another review."
-    },
-    {
-      "at": "2026-07-22T10:35:47.394202+00:00",
-      "type": "context_refreshed",
-      "detail": "Mode set to plan"
-    },
-    {
-      "at": "2026-07-22T10:35:47.426413+00:00",
-      "type": "pipeline_started",
-      "detail": "Dual pipeline started in plan mode; learning guard matched 0 rules"
-    },
-    {
-      "at": "2026-07-22T10:35:47.903828+00:00",
-      "type": "external_fixer_requested",
-      "detail": "REVIEW_CYCLE_COMPLETE: plan review found issues; edit the snapshot before another review."
-    },
-    {
-      "at": "2026-07-22T10:35:48.314937+00:00",
-      "type": "context_refreshed",
-      "detail": "Mode set to plan"
-    },
-    {
-      "at": "2026-07-22T10:35:48.352476+00:00",
-      "type": "pipeline_started",
-      "detail": "Dual pipeline started in plan mode; learning guard matched 0 rules"
     }
-  ],
-  "last_attempt_result": "RECORDED"
+  ]
 }

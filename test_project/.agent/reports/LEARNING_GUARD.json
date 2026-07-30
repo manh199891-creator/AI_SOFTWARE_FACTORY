@@ -1,24 +1,13 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-22T10:35:48.453048+00:00",
-  "task_id": "incident_plan",
-  "feature": "Test dual",
-  "mode": "plan",
-  "source_count": 5,
+  "generated_at": "2026-07-30T04:36:48.317153+00:00",
+  "task_id": "transition_test",
+  "feature": "transition smoke",
+  "mode": "code",
+  "source_count": 0,
   "matched_rule_count": 0,
   "rules": [],
-  "recent_outcomes": [
-    {
-      "status": "NEEDS_FIX",
-      "mode": "plan",
-      "reason": "REVIEW_CYCLE_COMPLETE: plan review found issues; edit the snapshot before another review."
-    },
-    {
-      "status": "NEEDS_FIX",
-      "mode": "plan",
-      "reason": "REVIEW_CYCLE_COMPLETE: plan review found issues; edit the snapshot before another review."
-    }
-  ],
+  "recent_outcomes": [],
   "token_policy": {
     "strategy": "compact_index_first",
     "max_context_chars": 4000,

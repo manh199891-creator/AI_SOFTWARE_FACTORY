@@ -1,4 +1,4 @@
-# PROJECT_CONTEXT.md - incident_plan
+# PROJECT_CONTEXT.md - transition_test
 
 ## Project
 
@@ -6,16 +6,16 @@ test_project
 
 ## Task
 
-Incident containment
+transition smoke
 
 ## Pipeline Mode
 
-plan
+code
 
 ## Workflow
 
 Use:
 
 ```powershell
-python E:\AI_SOFTWARE_FACTORY\harness.py test_project dual --task-id incident_plan --feature "Incident containment" --mode plan --max-cycles 2
+python E:\AI_SOFTWARE_FACTORY\harness.py test_project dual --task-id transition_test --feature "transition smoke" --mode code --max-cycles 2
 ```

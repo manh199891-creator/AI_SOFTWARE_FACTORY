@@ -1,8 +1,6 @@
 {
-  "task_id": "incident_plan",
-  "dual_mode": "plan",
-  "dual_status": "blocked_handoff",
-  "next_step": "root_cause_handoff",
-  "codex_status": "fail",
-  "dual_reason": "PHASE_REVIEW_BLOCKED: incident_plan/plan has 3 completed content failures; approve-phase-resume is required."
+  "task_id": "transition_test",
+  "dual_mode": "code",
+  "dual_status": "initialized",
+  "next_step": "04_implement"
 }
