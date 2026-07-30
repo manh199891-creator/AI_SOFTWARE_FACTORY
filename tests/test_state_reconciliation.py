@@ -33,8 +33,8 @@ def run_reconciler(project_root):
     return res
 
 def test_three_sources_conflict(tmp_path):
-    # Test 1 — Ba nguồn mâu thuẫn
-    state_dir = setup_state_fixture(tmp_path, "REVIEWED_APPROVED", "TASK_COMPLETE", "REVIEWING")
+    # Test Blocker 3 — Ba nguồn mâu thuẫn theo rules
+    state_dir = setup_state_fixture(tmp_path, "REVIEWING", "TASK_COMPLETE", "RUNNING")
     
     res = run_reconciler(tmp_path)
     assert res.returncode == 0
@@ -47,10 +47,11 @@ def test_three_sources_conflict(tmp_path):
     
     latest_history = pipeline["history"][-1]
     assert latest_history["reason_code"] == "STATE_SOURCES_CONFLICT"
-    assert "REVIEWED_APPROVED" in latest_history["reason"]
+    assert "pipeline=REVIEWING" in latest_history["reason"]
+    assert "workflow=TASK_COMPLETE" in latest_history["reason"]
 
 def test_three_sources_consistent(tmp_path):
-    # Test 2 — Ba nguồn nhất quán
+    # Test Blocker 3 — Ba nguồn nhất quán lifecycle hợp lệ
     state_dir = setup_state_fixture(tmp_path, "REVIEWING", "AWAITING_REVIEW", "RUNNING")
     
     res = run_reconciler(tmp_path)
@@ -60,6 +61,33 @@ def test_three_sources_consistent(tmp_path):
     assert pipeline["status"] == "REVIEWING" # Unchanged
     assert pipeline.get("terminal") is None
     assert len(pipeline["history"]) == 1 # No new history
+
+def test_infra_missing_pipeline_status(tmp_path):
+    # Blocker 2 - Missing pipeline_status.json
+    state_dir = setup_state_fixture(tmp_path, None, "AWAITING_REVIEW", "RUNNING")
+    res = run_reconciler(tmp_path)
+    assert res.returncode == 1
+    assert "STATE_SOURCE_MISSING: pipeline_status.json" in res.stdout
+    assert not (state_dir / "pipeline_status.json").exists()
+
+def test_infra_missing_review_run(tmp_path):
+    # Blocker 2 - Missing review_run.json
+    state_dir = setup_state_fixture(tmp_path, "REVIEWING", "AWAITING_REVIEW", None)
+    res = run_reconciler(tmp_path)
+    assert res.returncode == 1
+    assert "STATE_SOURCE_MISSING: review_run.json" in res.stdout
+    pipeline = json.loads((state_dir / "pipeline_status.json").read_text())
+    assert pipeline["status"] == "REVIEWING" # No STATE_DESYNC
+
+def test_infra_invalid_json(tmp_path):
+    # Blocker 2 - Invalid JSON
+    state_dir = setup_state_fixture(tmp_path, "REVIEWING", "AWAITING_REVIEW", "RUNNING")
+    (state_dir / "review_run.json").write_text("{ invalid json ", encoding="utf-8")
+    res = run_reconciler(tmp_path)
+    assert res.returncode == 1
+    assert "STATE_SOURCE_INVALID: review_run.json" in res.stdout
+    pipeline = json.loads((state_dir / "pipeline_status.json").read_text())
+    assert pipeline["status"] == "REVIEWING" # No STATE_DESYNC
 
 def test_idempotency(tmp_path):
     # Test 3 — Idempotency
