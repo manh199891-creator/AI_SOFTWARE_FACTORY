@@ -1,4 +1,4 @@
-# ACCEPTANCE_CRITERIA.md - transition_test
+# ACCEPTANCE_CRITERIA.md - incident_plan
 
 ## AC-01 - Scope
 
@@ -12,7 +12,7 @@ Project `verify` command must pass according to `.agent/project_profile.json`.
 
 The implemented behavior must satisfy:
 
-transition smoke
+Incident containment
 
 ## AC-04 - Codex Review
 

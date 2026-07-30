@@ -1,10 +1,10 @@
 # LEARNING_GUARD.md
 
 ## Status: PASS
-- task_id: transition_test
-- mode: code
-- generated_at: 2026-07-30T04:36:48.317153+00:00
-- source_count: 0
+- task_id: incident_plan
+- mode: plan
+- generated_at: 2026-07-22T10:35:48.453048+00:00
+- source_count: 5
 - matched_rule_count: 0
 
 ## Token Strategy

@@ -1,14 +1,14 @@
-# PLAN.md - transition_test
+# PLAN.md - incident_plan
 
 ## Goal
 
-transition smoke
+Incident containment
 
 ## Pipeline Contract
 
 - Antigravity implements the feature only inside `TASK_SCOPE.json`.
 - Codex reviews the exact snapshot.
-- Pipeline mode: `code`.
+- Pipeline mode: `plan`.
 - Release is blocked until build/QA/Codex/gate pass when mode is `release`.
 
 ## Phases
@@ -19,4 +19,22 @@ transition smoke
 4. Run verify, guardrails, Codex review, and release gate.
 5. If Codex fails, fix only the reported issues and rerun dual.
 
-PRESERVE_MARKER
+SNAPSHOT_1
+
+SNAPSHOT_2
+
+SNAPSHOT_3
+
+SNAPSHOT_4
+
+SNAPSHOT_5
+
+SNAPSHOT_6
+
+SNAPSHOT_7
+
+SNAPSHOT_8
+
+SNAPSHOT_9
+
+SNAPSHOT_10
