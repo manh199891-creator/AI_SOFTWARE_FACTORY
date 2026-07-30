@@ -1,1 +1,105 @@
-{"status_version": 2, "status": "REVIEWED_APPROVED", "terminal": false, "task_id": "auto_foundation_cleanup_fix", "mode": "code", "lifecycle_phase": "CODE", "review_kind": "checkpoint", "review_boundary_id": null, "run_id": "8b580489-ab57-4007-87d0-88c9c4a13f4e", "snapshot_hash": "e2401fff624adb34bd067eb175a89944dfdb3cc377dc69a765b9a5e4f59a5e61", "previous_snapshot_hash": "e2401fff624adb34bd067eb175a89944dfdb3cc377dc69a765b9a5e4f59a5e61", "reason_code": "MANUAL_OVERRIDE_QUOTA", "reason": "", "next_action": "observe_codex", "writer_status": "TASK_COMPLETE", "writer_checkpoint_id": "338616d8-9ee8-4cf7-9c1f-967adff3cb17", "work_item_current": 2, "work_item_total": 2, "phase_review_count": 0, "batch_review_count": 0, "failure_budget_remaining": 2, "ready_for_codex": false, "history": [{"from": "STALE", "to": "RUNNING", "at": "2026-07-23T04:41:26.612738+00:00", "reason_code": "PIPELINE_STARTED"}, {"from": "RUNNING", "to": "BLOCKED_VERIFY", "at": "2026-07-23T04:41:33.211513+00:00", "reason_code": "BLOCKED_VERIFY"}, {"from": "BLOCKED_VERIFY", "to": "RUNNING", "at": "2026-07-23T04:46:22.828499+00:00", "reason_code": "PIPELINE_STARTED"}, {"from": "RUNNING", "to": "NEEDS_FIX", "at": "2026-07-23T04:46:27.320932+00:00", "reason_code": "BLOCKED"}, {"from": "NEEDS_FIX", "to": "RUNNING", "at": "2026-07-23T04:51:27.858703+00:00", "reason_code": "PIPELINE_STARTED"}, {"from": "RUNNING", "to": "NEEDS_FIX", "at": "2026-07-23T04:51:54.665994+00:00", "reason_code": "WRITER_CHECKPOINT_REQUIRED"}, {"from": "NEEDS_FIX", "to": "NEEDS_FIX", "at": "2026-07-23T04:51:54.694323+00:00", "reason_code": "WRITER_CHECKPOINT_REQUIRED"}, {"from": "NEEDS_FIX", "to": "READY_FOR_REVIEW", "at": "2026-07-23T04:56:28.222988+00:00", "reason_code": "WRITER_CHECKPOINT_RECORDED"}, {"from": "READY_FOR_REVIEW", "to": "NEEDS_FIX", "at": "2026-07-23T04:56:50.678593+00:00", "reason_code": "Forbidden pipeline transition"}, {"from": "NEEDS_FIX", "to": "READY_FOR_REVIEW", "at": "2026-07-23T05:01:31.877234+00:00", "reason_code": "WRITER_CHECKPOINT_RECORDED"}, {"from": "READY_FOR_REVIEW", "to": "REVIEWING", "at": "2026-07-23T05:02:54.542644+00:00", "reason_code": "CHECKPOINT_RESERVED"}, {"from": "REVIEWING", "to": "REVIEWED_APPROVED", "at": "2026-07-23T05:08:22.467428+00:00", "reason_code": "MANUAL_OVERRIDE_QUOTA"}], "updated_at": "2026-07-23T05:02:54.542644+00:00"}
+{
+  "status_version": 2,
+  "status": "STATE_DESYNC",
+  "terminal": true,
+  "task_id": "auto_foundation_cleanup_fix",
+  "mode": "code",
+  "lifecycle_phase": "CODE",
+  "review_kind": "checkpoint",
+  "review_boundary_id": null,
+  "run_id": "8b580489-ab57-4007-87d0-88c9c4a13f4e",
+  "snapshot_hash": "e2401fff624adb34bd067eb175a89944dfdb3cc377dc69a765b9a5e4f59a5e61",
+  "previous_snapshot_hash": "e2401fff624adb34bd067eb175a89944dfdb3cc377dc69a765b9a5e4f59a5e61",
+  "reason_code": "MANUAL_OVERRIDE_QUOTA",
+  "reason": "",
+  "next_action": "observe_codex",
+  "writer_status": "TASK_COMPLETE",
+  "writer_checkpoint_id": "338616d8-9ee8-4cf7-9c1f-967adff3cb17",
+  "work_item_current": 2,
+  "work_item_total": 2,
+  "phase_review_count": 0,
+  "batch_review_count": 0,
+  "failure_budget_remaining": 2,
+  "ready_for_codex": false,
+  "history": [
+    {
+      "from": "STALE",
+      "to": "RUNNING",
+      "at": "2026-07-23T04:41:26.612738+00:00",
+      "reason_code": "PIPELINE_STARTED"
+    },
+    {
+      "from": "RUNNING",
+      "to": "BLOCKED_VERIFY",
+      "at": "2026-07-23T04:41:33.211513+00:00",
+      "reason_code": "BLOCKED_VERIFY"
+    },
+    {
+      "from": "BLOCKED_VERIFY",
+      "to": "RUNNING",
+      "at": "2026-07-23T04:46:22.828499+00:00",
+      "reason_code": "PIPELINE_STARTED"
+    },
+    {
+      "from": "RUNNING",
+      "to": "NEEDS_FIX",
+      "at": "2026-07-23T04:46:27.320932+00:00",
+      "reason_code": "BLOCKED"
+    },
+    {
+      "from": "NEEDS_FIX",
+      "to": "RUNNING",
+      "at": "2026-07-23T04:51:27.858703+00:00",
+      "reason_code": "PIPELINE_STARTED"
+    },
+    {
+      "from": "RUNNING",
+      "to": "NEEDS_FIX",
+      "at": "2026-07-23T04:51:54.665994+00:00",
+      "reason_code": "WRITER_CHECKPOINT_REQUIRED"
+    },
+    {
+      "from": "NEEDS_FIX",
+      "to": "NEEDS_FIX",
+      "at": "2026-07-23T04:51:54.694323+00:00",
+      "reason_code": "WRITER_CHECKPOINT_REQUIRED"
+    },
+    {
+      "from": "NEEDS_FIX",
+      "to": "READY_FOR_REVIEW",
+      "at": "2026-07-23T04:56:28.222988+00:00",
+      "reason_code": "WRITER_CHECKPOINT_RECORDED"
+    },
+    {
+      "from": "READY_FOR_REVIEW",
+      "to": "NEEDS_FIX",
+      "at": "2026-07-23T04:56:50.678593+00:00",
+      "reason_code": "Forbidden pipeline transition"
+    },
+    {
+      "from": "NEEDS_FIX",
+      "to": "READY_FOR_REVIEW",
+      "at": "2026-07-23T05:01:31.877234+00:00",
+      "reason_code": "WRITER_CHECKPOINT_RECORDED"
+    },
+    {
+      "from": "READY_FOR_REVIEW",
+      "to": "REVIEWING",
+      "at": "2026-07-23T05:02:54.542644+00:00",
+      "reason_code": "CHECKPOINT_RESERVED"
+    },
+    {
+      "from": "REVIEWING",
+      "to": "REVIEWED_APPROVED",
+      "at": "2026-07-23T05:08:22.467428+00:00",
+      "reason_code": "MANUAL_OVERRIDE_QUOTA"
+    },
+    {
+      "from": "REVIEWED_APPROVED",
+      "to": "STATE_DESYNC",
+      "at": "2026-07-30T02:24:33.505288+00:00",
+      "reason_code": "PHASE_1_FORCED_DESYNC"
+    }
+  ],
+  "updated_at": "2026-07-30T02:24:33.505288+00:00"
+}

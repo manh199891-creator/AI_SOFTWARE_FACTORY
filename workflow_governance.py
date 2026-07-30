@@ -872,3 +872,42 @@ def write_resumed_root_cause_handoff(project_root: Path, context: dict, resume_e
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
+
+
+import os
+
+class ReviewLifecycleGuard:
+    def __init__(self, project_root: Path, task_id: str, mode: str, checkpoint_authorization: dict | None = None):
+        if checkpoint_authorization is None:
+            raise ValueError("checkpoint_authorization cannot be None")
+        self.project_root = project_root
+        self.task_id = task_id
+        self.mode = mode
+        self.checkpoint_authorization = checkpoint_authorization
+        self.lock_path = self.project_root / ".agent" / "state" / f"{task_id}_{mode}.lock"
+        self._fd = None
+
+    def acquire(self):
+        try:
+            # os.O_CREAT | os.O_EXCL | os.O_WRONLY is cross-platform atomic file creation
+            self._fd = os.open(str(self.lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(self._fd, str(os.getpid()).encode())
+        except FileExistsError:
+            raise RuntimeError("RUN_ALREADY_ACTIVE")
+
+    def release(self):
+        if self._fd is not None:
+            os.close(self._fd)
+            try:
+                os.remove(str(self.lock_path))
+            except OSError:
+                pass
+            self._fd = None
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+

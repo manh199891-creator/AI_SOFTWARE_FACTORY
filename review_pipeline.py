@@ -1125,7 +1125,7 @@ def reconcile_stale_review(project_root, stale_after_seconds=240, now=None):
     return authority
 
 
-def run_codex_artifact_review(project_root, task_id, feature_name, codex_executable, mode, artifact_files,
+def _run_codex_artifact_review_impl(project_root, task_id, feature_name, codex_executable, mode, artifact_files,
                               review_lens=None, evidence_override=None, checkpoint_authorization=None,
                               parent_logical_run_id=None):
     """Review research/plan artifacts against an immutable repository snapshot."""
@@ -1346,7 +1346,7 @@ Use VERDICT="FAIL" when there is one or more finding. Valid severities are P0, P
     return manifest
 
 
-def run_multi_lens_artifact_review(project_root, task_id, feature_name, codex_executable,
+def _run_multi_lens_artifact_review_impl(project_root, task_id, feature_name, codex_executable,
                                    mode, artifact_files, lenses=None, checkpoint_authorization=None):
     """Run a fixed-lens session and publish one full-snapshot verdict.
 
@@ -1777,6 +1777,28 @@ def _write_finished(project_root, manifest, status, reason, stdout, stderr, exit
         
     state_dir = project_root / ".agent/state"
     (state_dir / "review_run.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+def _write_finished(project_root, manifest, status, reason, stdout, stderr, exit_code, reason_code=None):
+    manifest["status"] = status
+    manifest["completed_at"] = datetime.now().isoformat()
+    manifest["exit_code"] = exit_code
+    manifest["reason"] = reason
+    if reason_code:
+        manifest["reason_code"] = reason_code
+    
+    try:
+        import jsonschema
+        schema_path = Path(__file__).parent / "schemas" / "review_run.schema.json"
+        if not schema_path.exists():
+            raise Exception(f"Missing schema: {schema_path}")
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        jsonschema.validate(instance=manifest, schema=schema)
+    except Exception as e:
+        manifest["status"] = ReviewStatus.INFRA_FAIL
+        manifest["reason"] = f"Manifest schema validation failed: {e}"
+        
+    state_dir = project_root / ".agent/state"
+    (state_dir / "review_run.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     _ensure_review_report(project_root, manifest, status, reason, stdout, stderr, exit_code)
     
     # Save a JSON copy for history
@@ -1785,3 +1807,27 @@ def _write_finished(project_root, manifest, status, reason, stdout, stderr, exit
     (reviews_dir / f"{manifest['run_id']}.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     
     return manifest
+
+
+def run_codex_artifact_review(project_root, task_id, feature_name, codex_executable, mode, artifact_files,
+                              review_lens=None, evidence_override=None, checkpoint_authorization=None,
+                              parent_logical_run_id=None):
+    from workflow_governance import ReviewLifecycleGuard
+    guard = ReviewLifecycleGuard(project_root, task_id, mode, checkpoint_authorization)
+    guard.acquire()
+    try:
+        return _run_codex_artifact_review_impl(project_root, task_id, feature_name, codex_executable, mode, artifact_files,
+                                               review_lens, evidence_override, checkpoint_authorization, parent_logical_run_id)
+    finally:
+        guard.release()
+
+def run_multi_lens_artifact_review(project_root, task_id, feature_name, codex_executable,
+                                   mode, artifact_files, lenses=None, checkpoint_authorization=None):
+    from workflow_governance import ReviewLifecycleGuard
+    guard = ReviewLifecycleGuard(project_root, task_id, mode, checkpoint_authorization)
+    guard.acquire()
+    try:
+        return _run_multi_lens_artifact_review_impl(project_root, task_id, feature_name, codex_executable,
+                                                    mode, artifact_files, lenses, checkpoint_authorization)
+    finally:
+        guard.release()
