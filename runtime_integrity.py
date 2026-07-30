@@ -179,6 +179,11 @@ def verify_deployed_bundle(target_root: Path, project_name: str) -> dict:
 
 
 def preflight_integrity(factory_root: Path, project_root: Path, project_name: str, profile: dict) -> dict:
+    pipeline_file = project_root / ".agent/state/pipeline_status.json"
+    if pipeline_file.exists():
+        pipeline_data = _read_json(pipeline_file, {}) or {}
+        if pipeline_data.get("terminal") and pipeline_data.get("status") == "STATE_DESYNC":
+            raise IntegrityError("STATE_DESYNC_TERMINAL", "Task is in STATE_DESYNC terminal state")
     mode = profile.get("integrity_mode")
     if not mode:
         return {"status":"NOT_CONFIGURED"}
