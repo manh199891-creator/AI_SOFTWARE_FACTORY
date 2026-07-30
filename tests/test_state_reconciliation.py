@@ -78,20 +78,34 @@ def test_idempotency(tmp_path):
 
 def test_resume_blocked_by_terminal(tmp_path):
     # Test 4 — Resume bị chặn
-    state_dir = setup_state_fixture(tmp_path, "STATE_DESYNC", "AWAITING_REVIEW", "RUNNING")
-    pipeline = json.loads((state_dir / "pipeline_status.json").read_text())
-    pipeline["terminal"] = True
-    (state_dir / "pipeline_status.json").write_text(json.dumps(pipeline))
-    
-    # Call the preflight_integrity directly which cmd_dual uses to enforce integrity
     import sys
-    sys.path.append(str(Path(__file__).parent.parent))
-    from runtime_integrity import preflight_integrity, IntegrityError
+    import shutil
     
-    # Mock a basic profile
-    profile = {"integrity_mode": "canonical"}
+    harness_path = Path(__file__).parent.parent / "harness.py"
+    factory_root = harness_path.parent
+    
+    project_name = f"test_resume_{tmp_path.name}"
+    project_root = factory_root / project_name
+    project_root.mkdir(exist_ok=True)
+    
     try:
-        preflight_integrity(Path(__file__).parent.parent, tmp_path, "TestProject", profile)
-        assert False, "Should have raised IntegrityError"
-    except IntegrityError as e:
-        assert e.reason_code == "STATE_DESYNC_TERMINAL"
+        state_dir = setup_state_fixture(project_root, "STATE_DESYNC", "AWAITING_REVIEW", "RUNNING")
+        pipeline = json.loads((state_dir / "pipeline_status.json").read_text())
+        pipeline["terminal"] = True
+        (state_dir / "pipeline_status.json").write_text(json.dumps(pipeline))
+        
+        # create profile
+        (project_root / ".agent").mkdir(parents=True, exist_ok=True)
+        (project_root / ".agent" / "project_profile.json").write_text(json.dumps({"integrity_mode": "canonical"}))
+        
+        # run harness
+        res = subprocess.run(
+            [sys.executable, str(harness_path), project_name, "dual"],
+            cwd=str(factory_root),
+            capture_output=True, text=True, encoding="utf-8", errors="replace"
+        )
+        
+        assert res.returncode == 3
+        assert "STATE_DESYNC_TERMINAL" in res.stdout
+    finally:
+        shutil.rmtree(project_root, ignore_errors=True)
