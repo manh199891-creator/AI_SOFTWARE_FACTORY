@@ -1,47 +1,35 @@
 # CODEX_REVIEW.md
 
 ## Review Metadata
-- mode: plan
-- review_tier: STANDARD
-- run_id: 8aa5d7cb-5c15-489d-ac42-eb3592dfbe16
-- task_id: incident_plan
-- completed_at: 2026-07-22 17:35:48
-- reviewed_diff_hash: 6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236
-- status: FAIL
+- mode: real_review_batched
+- review_tier: DEEP
+- review_mode: FULL
+- review_purpose: release
+- run_id: caf0c07f-e953-4d55-b4f9-64c37d4131ac
+- task_id: test_task
+- completed_at: 2026-07-30 12:52:20
+- reviewed_diff_hash: 1033a3859419606575a6e9e94818e391189d4739acb9c70e16f2cd83a9c2be76
+- status: INFRA_FAIL
 - placeholder: false
-- reason: Review found issues.
-- exit_code: 0
-
+- reason: INFRA_FAIL: Timeout (1s)
+- reason_code: CODEX_TIMEOUT_SINGLE_LARGE_FILE
 
 ## Findings
-- **P1**: `file1.txt:10` - Bug found
-  There is a severe bug here.
+No findings.
+
+## Batch Reviews Summary
+- **Batch 1**: 1 files, INFRA_FAIL
+
+## Timing
+- Batch 1: prompt=107ms, workspace=18ms, codex=1189ms, parse=0ms, total=1329ms, prompt_chars=3806
 
 ## Raw Output
-### Stdout
+### Batch 1
+#### Stdout
 ```
-{
-  "VERDICT": "FAIL",
-  "REVIEWED_RUN_ID": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
-  "REVIEWED_SNAPSHOT_HASH": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
-  "REVIEWED_FILES": [
-    "PLAN.md",
-    "TECHNICAL_DESIGN.md",
-    "ACCEPTANCE_CRITERIA.md"
-  ],
-  "FINDINGS": [
-    {
-      "severity": "P1",
-      "file": "file1.txt",
-      "line": 10,
-      "title": "Bug found",
-      "body": "There is a severe bug here."
-    }
-  ]
-}
 
 ```
-### Stderr
+#### Stderr
 ```
 
 ```

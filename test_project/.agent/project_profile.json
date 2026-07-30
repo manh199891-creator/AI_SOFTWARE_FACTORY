@@ -1,1 +1,1 @@
-{"project_name": "test_project", "stage_patterns": ["**/*"], "release_requires": {"codex_real_review_pass": true, "diff_hash_match": true}, "codex_review": {"timeout_seconds": 2, "batch_max_files": 3, "batch_max_chars": 70000, "max_timeout_retries": 2}}
+{"project_name": "test_project", "stage_patterns": ["**/*"], "release_requires": {"codex_real_review_pass": true, "diff_hash_match": true}, "codex_review": {"timeout_seconds": 1}}

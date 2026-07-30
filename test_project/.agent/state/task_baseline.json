@@ -1,11 +1,10 @@
 {
   "schema_version": 1,
-  "task_id": "incident_plan",
-  "captured_at": "2026-07-22T17:35:45.006204+07:00",
+  "task_id": "generic_task",
+  "captured_at": "2026-07-30T12:52:15.603550+07:00",
   "base_revision": "UNBORN_HEAD",
-  "snapshot_hash": "d411d8900857f5a855e28d12cd2e73b8b595e916df372a38623b1800edfbe611",
+  "snapshot_hash": "1033a3859419606575a6e9e94818e391189d4739acb9c70e16f2cd83a9c2be76",
   "files": {
-    "file1.txt": "57a6b39822707e87e704d80dc0dbd3b61463d3ae8db83f5316ec0cce1cb0debd",
-    "secret.txt": "6668a58adadb1e82da7982814c594aab1a1bb38ec24b5c8279ac2ae5ded290a6"
+    "file1.txt": "57a6b39822707e87e704d80dc0dbd3b61463d3ae8db83f5316ec0cce1cb0debd"
   }
 }

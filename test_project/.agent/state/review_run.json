@@ -1,46 +1,59 @@
 {
   "schema_version": 2,
-  "run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
-  "parent_logical_run_id": "8aa5d7cb-5c15-489d-ac42-eb3592dfbe16",
+  "run_id": "cefd92aa-f78d-4cca-bf68-59ce3001bb68",
+  "parent_logical_run_id": "cefd92aa-f78d-4cca-bf68-59ce3001bb68",
   "review_kind": "legacy",
   "review_boundary_id": null,
-  "task_id": "incident_plan",
-  "feature_name": "Test dual",
-  "review_mode": "plan",
-  "review_lens": null,
+  "task_id": "test_task",
+  "feature_name": "## Task",
   "repository_root": "E:\\AI_SOFTWARE_FACTORY\\test_project\\source-code",
   "source_project_root": "E:\\AI_SOFTWARE_FACTORY\\test_project",
   "base_revision": "unknown",
   "included_files": [
-    "PLAN.md",
-    "TECHNICAL_DESIGN.md",
-    "ACCEPTANCE_CRITERIA.md"
+    "file1.txt"
   ],
   "excluded_files": [],
-  "plan_files": [],
-  "acceptance_files": [],
-  "snapshot_hash": "6194b50b16e60874cee0a24f13af3fa34710c1c0356f56eef03359a239f28236",
-  "source_snapshot_hash": "ab3acf0c50cb9412bea5524386ca5bbe195ffc0fa5aa60c9c3a446e1c1cac476",
+  "plan_files": [
+    ".agent/context/PLAN.md",
+    ".agent/context/TECHNICAL_DESIGN.md"
+  ],
+  "acceptance_files": [
+    ".agent/context/ACCEPTANCE_CRITERIA.md"
+  ],
+  "snapshot_hash": "1033a3859419606575a6e9e94818e391189d4739acb9c70e16f2cd83a9c2be76",
+  "review_tier": "DEEP",
+  "review_purpose": "release",
+  "review_mode": "FULL",
+  "previous_findings": [],
+  "review_metrics": {
+    "tier": "DEEP",
+    "file_count": 1,
+    "changed_lines": 1,
+    "sensitive_files": []
+  },
   "learning_guard": {
-    "matched_rule_count": 0,
+    "matched_rule_count": 1,
     "context": ".agent/context/MEMORY_CONTEXT.md",
     "report": ".agent/reports/LEARNING_GUARD.md"
   },
-  "report_path": ".agent/reports/codex-reviews/8aa5d7cb-5c15-489d-ac42-eb3592dfbe16.md",
-  "status": "FAIL",
-  "started_at": "2026-07-22T10:35:48.534522+00:00",
-  "heartbeat_at": "2026-07-22T10:35:48.709391+00:00",
-  "completed_at": "2026-07-22T10:35:48.709391+00:00",
-  "exit_code": 0,
-  "reason": "Review found issues.",
-  "findings": [
+  "report_path": ".agent/reports/codex-reviews/cefd92aa-f78d-4cca-bf68-59ce3001bb68.md",
+  "status": "RUNNING",
+  "pid": null,
+  "started_at": "2026-07-30T05:52:21.138622+00:00",
+  "heartbeat_at": "2026-07-30T05:52:21.138622+00:00",
+  "completed_at": null,
+  "exit_code": null,
+  "batches": [
     {
-      "severity": "P1",
-      "file": "file1.txt",
-      "line": 10,
-      "title": "Bug found",
-      "body": "There is a severe bug here."
+      "batch_id": 1,
+      "files": [
+        "file1.txt"
+      ],
+      "evidence_chars": 49,
+      "status": "QUEUED",
+      "reason": "",
+      "run_id": null,
+      "duration_seconds": 0
     }
-  ],
-  "evidence_truncated": false
+  ]
 }

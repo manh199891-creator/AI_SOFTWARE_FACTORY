@@ -1,8 +1,8 @@
-# TECHNICAL_DESIGN.md - incident_plan
+# TECHNICAL_DESIGN.md - generic_task
 
 ## Feature
 
-Incident containment
+Generic feature for any project
 
 ## Scope
 

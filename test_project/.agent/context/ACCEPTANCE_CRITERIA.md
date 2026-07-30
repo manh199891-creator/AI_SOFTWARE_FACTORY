@@ -1,4 +1,4 @@
-# ACCEPTANCE_CRITERIA.md - incident_plan
+# ACCEPTANCE_CRITERIA.md - generic_task
 
 ## AC-01 - Scope
 
@@ -12,7 +12,7 @@ Project `verify` command must pass according to `.agent/project_profile.json`.
 
 The implemented behavior must satisfy:
 
-Incident containment
+Generic feature for any project
 
 ## AC-04 - Codex Review
 
