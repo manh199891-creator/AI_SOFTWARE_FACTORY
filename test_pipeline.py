@@ -5,14 +5,57 @@ from pathlib import Path
 if sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
 
+# Monkey patch pathlib.Path.write_text to handle flaky Windows locks (Errno 22 / Errno 13)
+import pathlib
+_orig_write_text = pathlib.Path.write_text
+def safe_write_text(self, data, encoding=None, errors=None, newline=None):
+    for i in range(5):
+        try:
+            return _orig_write_text(self, data, encoding=encoding, errors=errors, newline=newline)
+        except OSError as e:
+            print(f"Retry {i+1} write_text on {self} due to {e}")
+            time.sleep(0.5)
+    return _orig_write_text(self, data, encoding=encoding, errors=errors, newline=newline)
+
+pathlib.Path.write_text = safe_write_text
+if hasattr(pathlib, 'WindowsPath'):
+    pathlib.WindowsPath.write_text = safe_write_text
+if hasattr(pathlib, 'PosixPath'):
+    pathlib.PosixPath.write_text = safe_write_text
+
 FACTORY_ROOT = Path("E:/AI_SOFTWARE_FACTORY")
 PROJECT_NAME = "test_project"
 PROJECT_ROOT = FACTORY_ROOT / PROJECT_NAME
 
 def setup_test_env():
-    if PROJECT_ROOT.exists():
-        shutil.rmtree(PROJECT_ROOT)
-        
+    """Ensure a clean test_project environment before running tests."""
+    if not PROJECT_ROOT.exists():
+        PROJECT_ROOT.mkdir(parents=True)
+    
+    # Clean up previous state
+    import uuid
+    for sub in [".agent", "source-code"]:
+        path = PROJECT_ROOT / sub
+        if path.exists():
+            temp_path = PROJECT_ROOT / f"{sub}_{uuid.uuid4().hex}"
+            renamed = False
+            for _ in range(10):
+                try:
+                    path.rename(temp_path)
+                    renamed = True
+                    break
+                except OSError:
+                    time.sleep(0.5)
+            if renamed:
+                shutil.rmtree(temp_path, ignore_errors=True)
+            else:
+                shutil.rmtree(path, ignore_errors=True)
+
+    # Recreate structure
+    (PROJECT_ROOT / ".agent/context").mkdir(parents=True, exist_ok=True)
+    (PROJECT_ROOT / ".agent/state").mkdir(parents=True, exist_ok=True)
+    (PROJECT_ROOT / ".agent/reports").mkdir(parents=True, exist_ok=True)
+    (PROJECT_ROOT / "source-code").mkdir(parents=True, exist_ok=True)        
     for sub in [".agent/context", ".agent/reports", ".agent/state", "source-code"]:
         (PROJECT_ROOT / sub).mkdir(parents=True, exist_ok=True)
         
@@ -114,7 +157,7 @@ def run_dual_scenario(scenario="PASS", extra_args=None, task_id="test_task"):
 
 
 
-def test_build_review_batches_by_file_count():
+def _test_build_review_batches_by_file_count():
     print("\n--- Running test_build_review_batches_by_file_count ---")
     from review_pipeline import build_review_batches
     
@@ -139,7 +182,7 @@ def test_build_review_batches_by_file_count():
     assert len(batches[2]["files"]) == 1
     print("SUCCESS: test_build_review_batches_by_file_count")
 
-def test_build_review_batches_by_chars():
+def _test_build_review_batches_by_chars():
     print("\n--- Running test_build_review_batches_by_chars ---")
     from review_pipeline import build_review_batches
     
@@ -170,7 +213,7 @@ def test_build_review_batches_by_chars():
     print("SUCCESS: test_build_review_batches_by_chars")
 
 
-def test_aggregate_batch_results_all_pass():
+def _test_aggregate_batch_results_all_pass():
     print("\n--- Running test_aggregate_batch_results_all_pass ---")
     from review_pipeline import aggregate_batch_results, ReviewStatus
     batches = [
@@ -181,7 +224,7 @@ def test_aggregate_batch_results_all_pass():
     assert status == ReviewStatus.PASS
     print("SUCCESS: test_aggregate_batch_results_all_pass")
 
-def test_aggregate_batch_results_fail():
+def _test_aggregate_batch_results_fail():
     print("\n--- Running test_aggregate_batch_results_fail ---")
     from review_pipeline import aggregate_batch_results, ReviewStatus
     batches = [
@@ -192,7 +235,7 @@ def test_aggregate_batch_results_fail():
     assert status == ReviewStatus.FAIL
     print("SUCCESS: test_aggregate_batch_results_fail")
 
-def test_aggregate_batch_results_stale_priority():
+def _test_aggregate_batch_results_stale_priority():
     print("\n--- Running test_aggregate_batch_results_stale_priority ---")
     from review_pipeline import aggregate_batch_results, ReviewStatus
     batches = [
@@ -204,7 +247,7 @@ def test_aggregate_batch_results_stale_priority():
     assert status == ReviewStatus.STALE
     print("SUCCESS: test_aggregate_batch_results_stale_priority")
 
-def test_aggregate_batch_results_infra_fail_priority():
+def _test_aggregate_batch_results_infra_fail_priority():
     print("\n--- Running test_aggregate_batch_results_infra_fail_priority ---")
     from review_pipeline import aggregate_batch_results, ReviewStatus
     batches = [
@@ -216,7 +259,7 @@ def test_aggregate_batch_results_infra_fail_priority():
     assert status == ReviewStatus.INFRA_FAIL
     print("SUCCESS: test_aggregate_batch_results_infra_fail_priority")
 
-def test_aggregate_batch_results_timeout_reason_code():
+def _test_aggregate_batch_results_timeout_reason_code():
     print("\n--- Running test_aggregate_batch_results_timeout_reason_code ---")
     from review_pipeline import aggregate_batch_results, ReviewStatus, run_codex_review
     # Actually wait, run_codex_review handles the reason_code. Let's just check aggregate_batch_results.
@@ -227,7 +270,7 @@ def test_aggregate_batch_results_timeout_reason_code():
     assert status == ReviewStatus.INFRA_FAIL
     print("SUCCESS: test_aggregate_batch_results_timeout_reason_code")
 
-def test_batch_runner_uses_passed_codex_executable():
+def _test_batch_runner_uses_passed_codex_executable():
     print("\n--- Running test_batch_runner_uses_passed_codex_executable ---")
     from review_pipeline import run_codex_review_batch
     
@@ -257,7 +300,7 @@ def test_batch_runner_uses_passed_codex_executable():
 
 
 
-def test_batch_reviews_summary_in_report():
+def _test_batch_reviews_summary_in_report():
     print("\n--- Running Phase 5: test_batch_reviews_summary_in_report ---")
     import review_pipeline
     import json
@@ -287,7 +330,7 @@ def test_batch_reviews_summary_in_report():
 
 
 
-def test_timeout_split_retry_pass():
+def _test_timeout_split_retry_pass():
     print("\n--- Running Phase 7: test_timeout_split_retry_pass ---")
     
     # Reset git and create exactly 3 modified files
@@ -323,7 +366,7 @@ def test_timeout_split_retry_pass():
     assert all(c["status"] == "PASS" for c in timeout_batch["children"])
     print("SUCCESS: test_timeout_split_retry_pass")
 
-def test_timeout_single_file_block():
+def _test_timeout_single_file_block():
     print("\n--- Running Phase 7: test_timeout_single_file_block ---")
     # Remove forbidden file for this test
     forbidden_file = PROJECT_ROOT / "source-code" / "secret.txt"
@@ -351,7 +394,7 @@ def test_timeout_single_file_block():
     assert "BLOCK_RELEASE" in res.stdout
     print("SUCCESS: test_timeout_single_file_block")
 
-def test_project_profile_has_codex_review():
+def _test_project_profile_has_codex_review():
     print("\n--- Running Phase 6: test_project_profile_has_codex_review ---")
     import json
     res = run_harness_args(["setup", "test_project", "test_project", "A dummy idea"])
@@ -364,7 +407,7 @@ def test_project_profile_has_codex_review():
     assert profile["codex_review"]["batch_max_files"] == 3
     print("SUCCESS: test_project_profile_has_codex_review")
 
-def test_scope_validation():
+def _test_scope_validation():
     print("\n--- Running Scope Validation ---")
     res, _ = run_codex_scenario("PASS")
     
@@ -375,7 +418,7 @@ def test_scope_validation():
     
     print("SUCCESS: Scope Validation")
 
-def test_scenario_pass():
+def _test_scenario_pass():
     print("\n--- Running Scenario: PASS ---")
     res, _ = run_codex_scenario("PASS")
     
@@ -390,7 +433,7 @@ def test_scenario_pass():
     
     print("SUCCESS: PASS")
 
-def test_scenario_fail():
+def _test_scenario_fail():
     print("\n--- Running Scenario: FAIL ---")
     res, _ = run_codex_scenario("FAIL")
     
@@ -403,7 +446,7 @@ def test_scenario_fail():
     
     print("SUCCESS: FAIL")
 
-def test_scenario_timeout():
+def _test_scenario_timeout():
     print("\n--- Running Scenario: TIMEOUT ---")
     env = {"CODEX_TIMEOUT_SECONDS": "1"}
     res, duration = run_codex_scenario("TIMEOUT", env_overrides=env)
@@ -420,7 +463,7 @@ def test_scenario_timeout():
     
     print("SUCCESS: TIMEOUT")
 
-def test_scenario_infra_fail():
+def _test_scenario_infra_fail():
     print("\n--- Running Scenario: INFRA_FAIL_BAD_JSON ---")
     res, _ = run_codex_scenario("INFRA_FAIL_BAD_JSON")
     
@@ -431,7 +474,7 @@ def test_scenario_infra_fail():
     
     print("SUCCESS: INFRA_FAIL_BAD_JSON")
 
-def test_scenario_empty():
+def _test_scenario_empty():
     print("\n--- Running Scenario: EMPTY ---")
     res, _ = run_codex_scenario("EMPTY")
     
@@ -441,7 +484,7 @@ def test_scenario_empty():
     
     print("SUCCESS: EMPTY")
 
-def test_scenario_non_zero():
+def _test_scenario_non_zero():
     print("\n--- Running Scenario: NON_ZERO_EXIT ---")
     res, _ = run_codex_scenario("NON_ZERO_EXIT")
     
@@ -452,7 +495,7 @@ def test_scenario_non_zero():
     
     print("SUCCESS: NON_ZERO_EXIT")
 
-def test_scenario_stale_source_changed():
+def _test_scenario_stale_source_changed():
     print("\n--- Running Scenario: STALE (source changed) ---")
     res, _ = run_codex_scenario("PASS_BUT_SOURCE_CHANGED")
     
@@ -465,7 +508,7 @@ def test_scenario_stale_source_changed():
     
     print("SUCCESS: STALE_SOURCE_CHANGED")
 
-def test_scenario_stale_run_id():
+def _test_scenario_stale_run_id():
     print("\n--- Running Scenario: STALE (wrong run ID) ---")
     res, _ = run_codex_scenario("PASS", env_overrides={"FAKE_CODEX_RUN_ID": "wrong-id"})
     
@@ -475,7 +518,7 @@ def test_scenario_stale_run_id():
     
     print("SUCCESS: STALE")
 
-def test_scenario_stale_reviewed_files():
+def _test_scenario_stale_reviewed_files():
     print("\n--- Running Scenario: STALE (wrong reviewed files) ---")
     res, _ = run_codex_scenario("BAD_REVIEWED_FILES")
     
@@ -485,7 +528,7 @@ def test_scenario_stale_reviewed_files():
     
     print("SUCCESS: STALE_REVIEWED_FILES")
 
-def test_gate_blocks_missing_scope():
+def _test_gate_blocks_missing_scope():
     print("\n--- Running Gate: missing TASK_SCOPE blocks ---")
     (PROJECT_ROOT / ".agent/reports/GUARDRAILS_REPORT.md").write_text("# GUARDRAILS_REPORT.md\n\n## Status: PASS\n", encoding="utf-8")
     scope_path = PROJECT_ROOT / ".agent/context/TASK_SCOPE.json"
@@ -500,7 +543,7 @@ def test_gate_blocks_missing_scope():
     print("SUCCESS: GATE_MISSING_SCOPE")
 
 
-def test_gate_blocks_batch_fail():
+def _test_gate_blocks_batch_fail():
     print("\n--- Running Gate: batch fail blocks ---")
     from review_pipeline import ReviewStatus
     import json
@@ -522,7 +565,7 @@ def test_gate_blocks_batch_fail():
     assert "One or more Codex review batches did not pass" in res.stdout
     print("SUCCESS: test_gate_blocks_batch_fail")
 
-def test_gate_allows_all_batch_pass():
+def _test_gate_allows_all_batch_pass():
     print("\n--- Running Gate: all batch pass allows ---")
     from review_pipeline import ReviewStatus
     import json
@@ -545,7 +588,7 @@ def test_gate_allows_all_batch_pass():
     assert "Batch reviews complete" in res.stdout
     print("SUCCESS: test_gate_allows_all_batch_pass")
 
-def test_gate_allows_bound_pass():
+def _test_gate_allows_bound_pass():
     print("\n--- Running Gate: bound PASS allows ---")
     (PROJECT_ROOT / ".agent/reports/GUARDRAILS_REPORT.md").write_text("# GUARDRAILS_REPORT.md\n\n## Status: PASS\n", encoding="utf-8")
     
@@ -555,7 +598,7 @@ def test_gate_allows_bound_pass():
     
     print("SUCCESS: GATE_BOUND_PASS")
 
-def test_dual_pipeline_pass():
+def _test_dual_pipeline_pass():
     print("\n--- Running Dual Pipeline: PASS ---")
     res = run_dual_scenario("PASS")
     assert res.returncode == 0, f"Dual pipeline should pass. Output:\n{res.stdout}\n{res.stderr}"
@@ -565,7 +608,7 @@ def test_dual_pipeline_pass():
     assert "## Status: PASS" in dual_report.read_text(encoding="utf-8")
     print("SUCCESS: DUAL_PIPELINE_PASS")
 
-def test_dual_pipeline_writes_fixer_handoff():
+def _test_dual_pipeline_writes_fixer_handoff():
     print("\n--- Running Dual Pipeline: FAIL writes handoff ---")
     res = run_dual_scenario("FAIL", extra_args=["--max-cycles", "2"])
     assert res.returncode != 0, "Dual pipeline should block when Codex fails and no fixer command exists"
@@ -579,7 +622,7 @@ def test_dual_pipeline_writes_fixer_handoff():
     assert get_state()["next_step"] == "external_fixer"
     print("SUCCESS: DUAL_PIPELINE_FIXER_HANDOFF")
 
-def test_dual_init_generic_task():
+def _test_dual_init_generic_task():
     print("\n--- Running Dual Init: generic task ---")
     saved_scope = (PROJECT_ROOT / ".agent/context/TASK_SCOPE.json").read_text(encoding="utf-8")
     state_file = PROJECT_ROOT / ".agent/state/workflow_state.json"
@@ -612,7 +655,7 @@ def test_dual_init_generic_task():
         
     print("SUCCESS: DUAL_INIT_GENERIC_TASK")
 
-def test_task_id_mismatch():
+def _test_task_id_mismatch():
     print("\n--- Running Scenario: TASK_ID_MISMATCH ---")
     scope = json.loads((PROJECT_ROOT / ".agent/context/TASK_SCOPE.json").read_text(encoding="utf-8"))
     scope["task_id"] = "wrong_task"
@@ -627,7 +670,7 @@ def test_task_id_mismatch():
     (PROJECT_ROOT / ".agent/context/TASK_SCOPE.json").write_text(json.dumps(scope), encoding="utf-8")
     print("SUCCESS: TASK_ID_MISMATCH")
 
-def test_schema_invalid():
+def _test_schema_invalid():
     print("\n--- Running Scenario: SCHEMA_INVALID ---")
     scope = json.loads((PROJECT_ROOT / ".agent/context/TASK_SCOPE.json").read_text(encoding="utf-8"))
     del scope["schema_version"]
@@ -645,18 +688,20 @@ def test_schema_invalid():
 def get_skill_scripts_dir():
     return Path("E:/AI_SOFTWARE_FACTORY/skills/dual-agent-pipeline/scripts")
 
-def test_skill_wrapper_init():
+def _test_skill_wrapper_init():
     print("\n--- Running Skill Wrapper: Init ---")
     script = get_skill_scripts_dir() / "dual_init.ps1"
-    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", PROJECT_NAME, "-TaskId", "wrapper_task", "-Feature", "Wrapper Feature", "-Mode", "code", "-Allowed", "*.txt", "-Force"], capture_output=True, text=True, encoding="utf-8", errors="replace")
-    assert res.returncode == 0, f"dual_init.ps1 failed: {res.stderr}"
+    env = os.environ.copy()
+    env["PYTHON_EXECUTABLE"] = sys.executable
+    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", PROJECT_NAME, "-TaskId", "wrapper_task", "-Feature", "Wrapper Feature", "-Mode", "code", "-Allowed", "*.txt", "-Force"], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+    assert res.returncode == 0, f"dual_init.ps1 failed: {res.stderr}\nSTDOUT: {res.stdout}"
     scope = json.loads((PROJECT_ROOT / ".agent/context/TASK_SCOPE.json").read_text(encoding="utf-8"))
     assert scope["task_id"] == "wrapper_task"
     file1 = PROJECT_ROOT / "source-code/file1.txt"
     file1.write_text(file1.read_text(encoding="utf-8") + "\nWRAPPER_TASK_DELTA", encoding="utf-8")
     print("SUCCESS: SKILL_WRAPPER_INIT")
 
-def test_skill_wrapper_run_pass():
+def _test_skill_wrapper_run_pass():
     print("\n--- Running Skill Wrapper: Run (PASS) ---")
     script = get_skill_scripts_dir() / "dual_run.ps1"
     
@@ -677,7 +722,7 @@ def test_skill_wrapper_run_pass():
     assert manifest["status"] == "PASS"
     print("SUCCESS: SKILL_WRAPPER_RUN_PASS")
 
-def test_skill_wrapper_run_fail():
+def _test_skill_wrapper_run_fail():
     print("\n--- Running Skill Wrapper: Run (FAIL) ---")
     script = get_skill_scripts_dir() / "dual_run.ps1"
     
@@ -697,44 +742,52 @@ def test_skill_wrapper_run_fail():
     assert (PROJECT_ROOT / ".agent/reports/FIXER_HANDOFF.md").exists()
     print("SUCCESS: SKILL_WRAPPER_RUN_FAIL")
 
-def test_skill_wrapper_status_pass():
+def _test_skill_wrapper_status_pass():
     print("\n--- Running Skill Wrapper: Status (PASS) ---")
     script = get_skill_scripts_dir() / "dual_status.ps1"
     # The previous wrapper test intentionally left NEEDS_FIX. A retry is only
     # authorized after the scoped snapshot changes.
     file1 = PROJECT_ROOT / "source-code/file1.txt"
     file1.write_text(file1.read_text(encoding="utf-8") + "\nSTATUS_PASS_DELTA", encoding="utf-8")
-    test_skill_wrapper_run_pass()
-    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", PROJECT_NAME], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    _test_skill_wrapper_run_pass()
+    env = os.environ.copy()
+    env["PYTHON_EXECUTABLE"] = sys.executable
+    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", PROJECT_NAME], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     assert "PASS" in res.stdout, f"Status should be PASS, got: {res.stdout}"
     print("SUCCESS: SKILL_WRAPPER_STATUS_PASS")
 
-def test_skill_wrapper_status_fail():
+def _test_skill_wrapper_status_fail():
     print("\n--- Running Skill Wrapper: Status (NEEDS_FIX) ---")
     script = get_skill_scripts_dir() / "dual_status.ps1"
-    test_skill_wrapper_run_fail()
-    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", PROJECT_NAME], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    _test_skill_wrapper_run_fail()
+    env = os.environ.copy()
+    env["PYTHON_EXECUTABLE"] = sys.executable
+    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", PROJECT_NAME], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     assert "Status: NEEDS_FIX" in res.stdout, f"Actionable review failure should be NEEDS_FIX, got: {res.stdout}"
     assert "Terminal: False" in res.stdout, f"NEEDS_FIX must remain non-terminal, got: {res.stdout}"
     print("SUCCESS: SKILL_WRAPPER_STATUS_NEEDS_FIX")
 
-def test_skill_wrapper_status_alias_revit():
+def _test_skill_wrapper_status_alias_revit():
     print("\n--- Running Skill Wrapper: Status Alias Revit ---")
     script = get_skill_scripts_dir() / "dual_status.ps1"
     # Even if RevitAddinSolution state is unknown, it shouldn't fail with path not found
-    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", "revit"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    env = os.environ.copy()
+    env["PYTHON_EXECUTABLE"] = sys.executable
+    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", "revit"], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     # Should say something about RevitAddinSolution state or INFRA_FAIL, but NOT missing path
     assert "PathNotFound" not in res.stderr
     print("SUCCESS: SKILL_WRAPPER_STATUS_ALIAS_REVIT")
 
-def test_skill_wrapper_read_reports_alias_revit():
+def _test_skill_wrapper_read_reports_alias_revit():
     print("\n--- Running Skill Wrapper: Read Reports Alias Revit ---")
     script = get_skill_scripts_dir() / "dual_read_reports.ps1"
-    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", "revit"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    env = os.environ.copy()
+    env["PYTHON_EXECUTABLE"] = sys.executable
+    res = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Project", "revit"], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     assert "RevitAddinSolution" in res.stdout or "RevitAddinSolution" in res.stderr or "PathNotFound" not in res.stderr
     print("SUCCESS: SKILL_WRAPPER_READ_REPORTS_ALIAS_REVIT")
 
-def test_skill_wrapper_fix_command_passthrough():
+def _test_skill_wrapper_fix_command_passthrough():
     print("\n--- Running Skill Wrapper: FixCommand Passthrough ---")
     script = get_skill_scripts_dir() / "dual_run.ps1"
     temp_bin = FACTORY_ROOT / "temp_bin"
@@ -756,7 +809,7 @@ def test_skill_wrapper_fix_command_passthrough():
     # We will just verify it runs without error syntax.
     print("SUCCESS: SKILL_WRAPPER_FIX_COMMAND_PASSTHROUGH")
 
-def test_skill_location_independent_docs():
+def _test_skill_location_independent_docs():
     print("\n--- Running Skill Wrapper: Location Independent Docs ---")
     skill_file = get_skill_scripts_dir().parent / "SKILL.md"
     content = skill_file.read_text(encoding="utf-8")
@@ -764,7 +817,7 @@ def test_skill_location_independent_docs():
     assert "scripts\\dual_init.ps1" in content, "SKILL.md doesn't use relative paths"
     print("SUCCESS: SKILL_LOCATION_INDEPENDENT_DOCS")
 
-def test_review_budget_defaults():
+def _test_review_budget_defaults():
     print("\n--- Running Review Budget Defaults ---")
     import review_pipeline
     
@@ -789,7 +842,7 @@ def test_review_budget_defaults():
     assert config["max_timeout_retries"] == 2
     print("SUCCESS: REVIEW_BUDGET_DEFAULTS")
 
-def test_review_budget_overrides():
+def _test_review_budget_overrides():
     print("\n--- Running Review Budget Overrides ---")
     import review_pipeline
     
@@ -822,7 +875,7 @@ def test_review_budget_overrides():
 
     print("SUCCESS: REVIEW_BUDGET_OVERRIDES")
 
-def test_codex_timeout_state():
+def _test_codex_timeout_state():
     print("\n--- Running Scenario: TIMEOUT STATE ---")
     
     # Update project_profile.json to set timeout_seconds to 1
@@ -849,7 +902,7 @@ def test_codex_timeout_state():
     assert "BLOCK_RELEASE" in gate_res.stdout
     print("SUCCESS: TIMEOUT_STATE")
 
-def test_evidence_truncation():
+def _test_evidence_truncation():
     print("\n--- Running Scenario: EVIDENCE TRUNCATION ---")
     
     # 1. Create a large file that exceeds a small threshold
@@ -877,7 +930,7 @@ def test_evidence_truncation():
         large_file.unlink()
     print("SUCCESS: EVIDENCE_TRUNCATION")
 
-def test_file_truncation():
+def _test_file_truncation():
     print("\n--- Running Scenario: FILE TRUNCATION ---")
     
     # 1. Create a large file that exceeds max_file_chars
@@ -940,7 +993,7 @@ def run_dual_mode_with_fake(mode, task_id):
     )
     return run_res
 
-def test_research_mode_pass():
+def _test_research_mode_pass():
     print("\n--- Running Dual Mode: RESEARCH ---")
     setup_test_env()
     res = run_dual_mode_with_fake("research", "research_mode_test")
@@ -951,7 +1004,7 @@ def test_research_mode_pass():
     assert "release_gate" not in (PROJECT_ROOT / ".agent/reports/DUAL_AGENT_REPORT.md").read_text(encoding="utf-8")
     print("SUCCESS: RESEARCH_MODE_PASS")
 
-def test_plan_mode_pass():
+def _test_plan_mode_pass():
     print("\n--- Running Dual Mode: PLAN ---")
     setup_test_env()
     res = run_dual_mode_with_fake("plan", "plan_mode_test")
@@ -961,7 +1014,7 @@ def test_plan_mode_pass():
     assert manifest["included_files"] == ["PLAN.md", "TECHNICAL_DESIGN.md", "ACCEPTANCE_CRITERIA.md"]
     print("SUCCESS: PLAN_MODE_PASS")
 
-def test_code_mode_stops_before_release():
+def _test_code_mode_stops_before_release():
     print("\n--- Running Dual Mode: CODE ---")
     setup_test_env()
     (PROJECT_ROOT / "source-code/secret.txt").unlink()
@@ -973,7 +1026,7 @@ def test_code_mode_stops_before_release():
     assert "release_gate" not in report
     print("SUCCESS: CODE_MODE_READY_FOR_RELEASE")
 
-def test_mode_transition_preserves_scope():
+def _test_mode_transition_preserves_scope():
     print("\n--- Running Dual Mode Transition: CODE TO RELEASE ---")
     setup_test_env()
     first = run_harness_args([
@@ -1000,7 +1053,7 @@ def test_mode_transition_preserves_scope():
     print("SUCCESS: MODE_TRANSITION_PRESERVES_SCOPE")
 
 
-def test_p0_task_context_and_knowledge_layout():
+def _test_p0_task_context_and_knowledge_layout():
     print("\n--- Running P0: durable task context ---")
     result = run_harness_args([
         "dual-init", "--task-id", "governance_task", "--feature", "Governance test",
@@ -1018,7 +1071,7 @@ def test_p0_task_context_and_knowledge_layout():
     print("SUCCESS: P0_TASK_CONTEXT")
 
 
-def test_p0_fresh_evidence_and_stale_detection():
+def _test_p0_fresh_evidence_and_stale_detection():
     print("\n--- Running P0: fresh evidence manifest ---")
     from workflow_governance import build_evidence_manifest, validate_fresh_evidence
     results = [{
@@ -1037,7 +1090,7 @@ def test_p0_fresh_evidence_and_stale_detection():
     print("SUCCESS: P0_FRESH_EVIDENCE")
 
 
-def test_p0_failure_budget_writes_handoff_and_bug_episode():
+def _test_p0_failure_budget_writes_handoff_and_bug_episode():
     print("\n--- Running P0/P1: failure budget and bug episode ---")
     from workflow_governance import record_failed_attempt
     exhausted = False
@@ -1055,7 +1108,7 @@ def test_p0_failure_budget_writes_handoff_and_bug_episode():
     print("SUCCESS: P0_FAILURE_BUDGET")
 
 
-def test_p1_review_routing():
+def _test_p1_review_routing():
     print("\n--- Running P1: risk-based review routing ---")
     from review_pipeline import determine_review_tier
     repo = PROJECT_ROOT / "routing-repo"
@@ -1077,7 +1130,7 @@ def test_p1_review_routing():
     print("SUCCESS: P1_REVIEW_ROUTING")
 
 
-def test_task_baseline_excludes_unchanged_preexisting_dirt():
+def _test_task_baseline_excludes_unchanged_preexisting_dirt():
     print("\n--- Running P0: immutable task baseline ---")
     setup_test_env()
     init = run_harness_args([
@@ -1101,7 +1154,7 @@ def test_task_baseline_excludes_unchanged_preexisting_dirt():
     print("SUCCESS: TASK_BASELINE_EXCLUDES_PREEXISTING_DIRT")
 
 
-def test_task_baseline_blocks_modified_preexisting_dirt():
+def _test_task_baseline_blocks_modified_preexisting_dirt():
     print("\n--- Running P0: modified baseline dirt is blocked ---")
     setup_test_env()
     init = run_harness_args([
@@ -1124,7 +1177,7 @@ def test_task_baseline_blocks_modified_preexisting_dirt():
     print("SUCCESS: TASK_BASELINE_BLOCKS_MODIFIED_DIRT")
 
 
-def test_task_baseline_blocks_empty_task_delta():
+def _test_task_baseline_blocks_empty_task_delta():
     print("\n--- Running P0: empty task delta is blocked ---")
     setup_test_env()
     init = run_harness_args([
@@ -1144,7 +1197,7 @@ def test_task_baseline_blocks_empty_task_delta():
     print("SUCCESS: TASK_BASELINE_BLOCKS_EMPTY_DELTA")
 
 
-def test_dual_fail_fast_on_verify_failure():
+def _test_dual_fail_fast_on_verify_failure():
     print("\n--- Running P0: verify failure stops before Codex ---")
     setup_test_env()
     profile_path = PROJECT_ROOT / ".agent/project_profile.json"
@@ -1172,7 +1225,7 @@ def test_dual_fail_fast_on_verify_failure():
     print("SUCCESS: VERIFY_FAILURE_FAILS_FAST")
 
 
-def test_failure_budget_requires_changed_snapshot_and_hypothesis():
+def _test_failure_budget_requires_changed_snapshot_and_hypothesis():
     print("\n--- Running P0: failure budget retry preflight ---")
     setup_test_env()
     init = run_harness_args([
@@ -1222,7 +1275,7 @@ def test_failure_budget_requires_changed_snapshot_and_hypothesis():
     print("SUCCESS: FAILURE_BUDGET_RETRY_PREFLIGHT")
 
 
-def test_status_and_wait_stop_on_blocked_handoff():
+def _test_status_and_wait_stop_on_blocked_handoff():
     print("\n--- Running P0: bounded terminal wait ---")
     setup_test_env()
     context_path = PROJECT_ROOT / ".agent/context/TASK_CONTEXT.json"
@@ -1259,7 +1312,7 @@ def test_status_and_wait_stop_on_blocked_handoff():
     print("SUCCESS: BOUNDED_TERMINAL_WAIT")
 
 
-def test_dual_persists_terminal_state_and_blocks_fourth_review():
+def _test_dual_persists_terminal_state_and_blocks_fourth_review():
     print("\n--- Running P0: terminal budget stops external reruns ---")
     setup_test_env()
     init = run_harness_args([
@@ -1294,7 +1347,7 @@ def test_dual_persists_terminal_state_and_blocks_fourth_review():
     print("SUCCESS: TERMINAL_BUDGET_STOPS_EXTERNAL_RERUNS")
 
 
-def test_research_budget_blocks_review_until_artifact_changes():
+def _test_research_budget_blocks_review_until_artifact_changes():
     print("\n--- Running P0: research budget blocks blind reruns ---")
     setup_test_env()
     init = run_harness_args([
@@ -1328,7 +1381,7 @@ def test_research_budget_blocks_review_until_artifact_changes():
     print("SUCCESS: RESEARCH_BUDGET_BLOCKS_BLIND_RERUNS")
 
 
-def test_containment_phase_counter_survives_reinit_and_ignores_non_content_outcomes():
+def _test_containment_phase_counter_survives_reinit_and_ignores_non_content_outcomes():
     print("\n--- Running Containment T1: durable phase counter ---")
     setup_test_env()
     init = run_harness_args([
@@ -1360,7 +1413,7 @@ def test_containment_phase_counter_survives_reinit_and_ignores_non_content_outco
     print("SUCCESS: CONTAINMENT_DURABLE_PHASE_COUNTER")
 
 
-def test_containment_phase_resume_approval_is_single_use_without_reset():
+def _test_containment_phase_resume_approval_is_single_use_without_reset():
     print("\n--- Running Containment T1: explicit phase approval ---")
     from workflow_governance import (
         authorize_phase_review_attempt, record_phase_review_outcome,
@@ -1400,7 +1453,7 @@ def test_containment_phase_resume_approval_is_single_use_without_reset():
     print("SUCCESS: CONTAINMENT_SINGLE_USE_APPROVAL")
 
 
-def test_containment_ten_changed_plan_failures_launch_only_three_reviews():
+def _test_containment_ten_changed_plan_failures_launch_only_three_reviews():
     print("\n--- Running Containment T1: ten-invocation incident fixture ---")
     setup_test_env()
     init = run_harness_args([
@@ -1431,42 +1484,42 @@ def main():
         setup_test_env()
 
         # Locked containment Task 1 RED/GREEN acceptance.
-        test_containment_phase_counter_survives_reinit_and_ignores_non_content_outcomes()
-        test_containment_phase_resume_approval_is_single_use_without_reset()
-        test_containment_ten_changed_plan_failures_launch_only_three_reviews()
+        _test_containment_phase_counter_survives_reinit_and_ignores_non_content_outcomes()
+        _test_containment_phase_resume_approval_is_single_use_without_reset()
+        _test_containment_ten_changed_plan_failures_launch_only_three_reviews()
         
         # Phase 0: Test Configs
-        test_review_budget_defaults()
-        test_review_budget_overrides()
-        test_p0_task_context_and_knowledge_layout()
-        test_p0_fresh_evidence_and_stale_detection()
-        test_p0_failure_budget_writes_handoff_and_bug_episode()
-        test_p1_review_routing()
-        test_task_baseline_excludes_unchanged_preexisting_dirt()
-        test_task_baseline_blocks_modified_preexisting_dirt()
-        test_task_baseline_blocks_empty_task_delta()
-        test_dual_fail_fast_on_verify_failure()
-        test_failure_budget_requires_changed_snapshot_and_hypothesis()
-        test_status_and_wait_stop_on_blocked_handoff()
-        test_dual_persists_terminal_state_and_blocks_fourth_review()
-        test_research_budget_blocks_review_until_artifact_changes()
+        _test_review_budget_defaults()
+        _test_review_budget_overrides()
+        _test_p0_task_context_and_knowledge_layout()
+        _test_p0_fresh_evidence_and_stale_detection()
+        _test_p0_failure_budget_writes_handoff_and_bug_episode()
+        _test_p1_review_routing()
+        _test_task_baseline_excludes_unchanged_preexisting_dirt()
+        _test_task_baseline_blocks_modified_preexisting_dirt()
+        _test_task_baseline_blocks_empty_task_delta()
+        _test_dual_fail_fast_on_verify_failure()
+        _test_failure_budget_requires_changed_snapshot_and_hypothesis()
+        _test_status_and_wait_stop_on_blocked_handoff()
+        _test_dual_persists_terminal_state_and_blocks_fourth_review()
+        _test_research_budget_blocks_review_until_artifact_changes()
         setup_test_env()
         
         # Phase 1: Test Scope
-        test_aggregate_batch_results_all_pass()
-        test_aggregate_batch_results_fail()
-        test_aggregate_batch_results_stale_priority()
-        test_aggregate_batch_results_infra_fail_priority()
-        test_aggregate_batch_results_timeout_reason_code()
-        test_batch_runner_uses_passed_codex_executable()
-        test_build_review_batches_by_file_count()
-        test_build_review_batches_by_chars()
-        test_batch_reviews_summary_in_report()
-        test_project_profile_has_codex_review()
+        _test_aggregate_batch_results_all_pass()
+        _test_aggregate_batch_results_fail()
+        _test_aggregate_batch_results_stale_priority()
+        _test_aggregate_batch_results_infra_fail_priority()
+        _test_aggregate_batch_results_timeout_reason_code()
+        _test_batch_runner_uses_passed_codex_executable()
+        _test_build_review_batches_by_file_count()
+        _test_build_review_batches_by_chars()
+        _test_batch_reviews_summary_in_report()
+        _test_project_profile_has_codex_review()
 
-        test_scope_validation()
-        test_task_id_mismatch()
-        test_schema_invalid()
+        _test_scope_validation()
+        _test_task_id_mismatch()
+        _test_schema_invalid()
         
         # Reset environment before Phase 2 to prevent state leakage from Phase 1 tests
         setup_test_env()
@@ -1474,68 +1527,72 @@ def main():
         (PROJECT_ROOT / "source-code" / "secret.txt").unlink()
         
         # Phase 2: Dual Init
-        test_dual_init_generic_task()
+        _test_dual_init_generic_task()
         
         # Phase 3: Codex Scenarios
-        test_scenario_pass()
-        test_scenario_fail()
-        test_scenario_timeout()
-        test_codex_timeout_state()
-        test_evidence_truncation()
-        test_scenario_infra_fail()
+        _test_scenario_pass()
+        _test_scenario_fail()
+        _test_scenario_timeout()
+        _test_codex_timeout_state()
+        _test_evidence_truncation()
+        _test_scenario_infra_fail()
         
         # Phase 4: Stale Status
-        test_scenario_stale_source_changed()
-        test_scenario_fail()
-        test_scenario_timeout()
-        test_scenario_infra_fail()
-        test_scenario_empty()
-        test_scenario_non_zero()
-        test_scenario_stale_source_changed()
-        test_scenario_stale_run_id()
-        test_scenario_stale_reviewed_files()
-        test_scenario_pass()
-        test_gate_blocks_missing_scope()
-        test_gate_blocks_batch_fail()
-        test_gate_allows_all_batch_pass()
-        test_gate_allows_bound_pass()
-        test_dual_pipeline_pass()
-        test_dual_pipeline_writes_fixer_handoff()
+        _test_scenario_stale_source_changed()
+        _test_scenario_fail()
+        _test_scenario_timeout()
+        _test_scenario_infra_fail()
+        _test_scenario_empty()
+        _test_scenario_non_zero()
+        _test_scenario_stale_source_changed()
+        _test_scenario_stale_run_id()
+        _test_scenario_stale_reviewed_files()
+        _test_scenario_pass()
+        _test_gate_blocks_missing_scope()
+        _test_gate_blocks_batch_fail()
+        _test_gate_allows_all_batch_pass()
+        _test_gate_allows_bound_pass()
+        _test_dual_pipeline_pass()
+        _test_dual_pipeline_writes_fixer_handoff()
         
         # Phase 7: Split Timeout logic
-        test_timeout_split_retry_pass()
-        test_timeout_single_file_block()
+        _test_timeout_split_retry_pass()
+        _test_timeout_single_file_block()
 
         # Phase 8: Explicit research/plan/code mode contracts
-        test_research_mode_pass()
-        test_plan_mode_pass()
-        test_code_mode_stops_before_release()
-        test_mode_transition_preserves_scope()
+        _test_research_mode_pass()
+        _test_plan_mode_pass()
+        _test_code_mode_stops_before_release()
+        _test_mode_transition_preserves_scope()
         
         # Reset environment before Phase 6 to prevent state leakage
         setup_test_env()
         
         # Phase 6: Skill Wrapper Tests
-        test_skill_wrapper_init()
-        test_skill_wrapper_run_pass()
-        test_skill_wrapper_run_fail()
-        test_skill_wrapper_status_pass()
-        test_skill_wrapper_status_fail()
-        test_skill_wrapper_status_alias_revit()
-        test_skill_wrapper_read_reports_alias_revit()
-        test_skill_wrapper_fix_command_passthrough()
-        test_skill_location_independent_docs()
+        _test_skill_wrapper_init()
+        _test_skill_wrapper_run_pass()
+        _test_skill_wrapper_run_fail()
+        _test_skill_wrapper_status_pass()
+        _test_skill_wrapper_status_fail()
+        _test_skill_wrapper_status_alias_revit()
+        _test_skill_wrapper_read_reports_alias_revit()
+        _test_skill_wrapper_fix_command_passthrough()
+        _test_skill_location_independent_docs()
         
         print("\nALL TESTS COMPLETED SUCCESSFULLY!")
-        sys.exit(0)
+        return
     except AssertionError as e:
         import traceback
         print(f"\nTEST FAILED: {e}")
         traceback.print_exc()
-        sys.exit(1)
+        raise
     except Exception as e:
         print(f"\nTEST CRASHED: {e}")
-        sys.exit(1)
+        raise
+
+def test_full_pipeline_e2e():
+    main()
 
 if __name__ == "__main__":
     main()
+

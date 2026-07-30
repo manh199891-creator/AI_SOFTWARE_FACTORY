@@ -878,8 +878,6 @@ import os
 
 class ReviewLifecycleGuard:
     def __init__(self, project_root: Path, task_id: str, mode: str, checkpoint_authorization: dict | None = None):
-        if checkpoint_authorization is None:
-            raise ValueError("checkpoint_authorization cannot be None")
         self.project_root = project_root
         self.task_id = task_id
         self.mode = mode

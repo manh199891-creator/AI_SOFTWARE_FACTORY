@@ -32,6 +32,7 @@ def main():
     # Let's read stdin to extract the hash and run_id from the prompt if possible
     # For a fake test, we can just grab it by parsing the input prompt
     stdin_content = sys.stdin.read()
+    with open('fake_codex_stdin.txt', 'w', encoding='utf-8') as f: f.write(stdin_content)
     
     run_id = "unknown"
     snapshot_hash = "unknown"

@@ -296,7 +296,8 @@ class DualLoopGuardTests(unittest.TestCase):
              patch.object(review_pipeline, "get_review_config", return_value={"max_diff_chars": 10000}), \
              patch.object(review_pipeline, "run_codex_artifact_review", side_effect=child):
             result = review_pipeline.run_multi_lens_artifact_review(
-                root, "task", "feature", "codex", "research", ["RESEARCH.md"], lenses=("scope", "security")
+                root, "task", "feature", "codex", "research", ["RESEARCH.md"], lenses=("scope", "security"),
+                checkpoint_authorization={"logical_run_id": "test_logical_run"}
             )
 
         self.assertEqual(review_pipeline.ReviewStatus.INFRA_FAIL, result["status"])

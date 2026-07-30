@@ -10,6 +10,24 @@ from datetime import datetime
 if sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
 
+# Monkey patch pathlib.Path.write_text to handle flaky Windows locks (Errno 22 / Errno 13)
+import pathlib
+_orig_write_text = pathlib.Path.write_text
+def safe_write_text(self, data, encoding=None, errors=None, newline=None):
+    for i in range(5):
+        try:
+            return _orig_write_text(self, data, encoding=encoding, errors=errors, newline=newline)
+        except OSError as e:
+            print(f"Retry {i+1} write_text on {self} due to {e}")
+            time.sleep(0.5)
+    return _orig_write_text(self, data, encoding=encoding, errors=errors, newline=newline)
+
+pathlib.Path.write_text = safe_write_text
+if hasattr(pathlib, 'WindowsPath'):
+    pathlib.WindowsPath.write_text = safe_write_text
+if hasattr(pathlib, 'PosixPath'):
+    pathlib.PosixPath.write_text = safe_write_text
+
 FACTORY_ROOT = Path(os.environ.get("AI_SOFTWARE_FACTORY_ROOT", "E:/AI_SOFTWARE_FACTORY"))
 
 PROJECT_ALIASES = {
