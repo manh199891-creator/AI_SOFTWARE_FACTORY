@@ -49,7 +49,10 @@
     },
     "shared_dependencies": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+      }
     },
     "workflow_version": {
       "type": "string",

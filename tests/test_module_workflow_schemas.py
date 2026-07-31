@@ -349,3 +349,39 @@ def test_built_at_invalid_datetime_rejected(schemas_dir: Path, examples_dir: Pat
     instance["built_at"] = "not-a-datetime"
     with pytest.raises(ValidationError):
         validate_schema_instance(schema, instance)
+
+
+def test_absolute_shared_dependency_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    """shared_dependencies with absolute path must be rejected by schema."""
+    schema = load_json(schemas_dir / "module.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/MODULE.json")
+    instance["shared_dependencies"] = ["E:/some/absolute/path.dll"]
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+def test_absolute_scope_allowed_path_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    """allowed_paths with absolute path must be rejected by schema."""
+    schema = load_json(schemas_dir / "scope.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/SCOPE.json")
+    instance["allowed_paths"] = ["E:/AI_SOFTWARE_FACTORY/src/**"]
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+def test_absolute_repository_root_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    """repository_root with absolute path must be rejected by schema."""
+    schema = load_json(schemas_dir / "evidence.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    instance["repository_root"] = "E:/AI_SOFTWARE_FACTORY"
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+def test_absolute_diagnosis_source_path_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    """diagnosis_sources[].path with absolute path must be rejected by schema."""
+    schema = load_json(schemas_dir / "evidence.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    instance["diagnosis_sources"][0]["path"] = "E:/AI_SOFTWARE_FACTORY/src/Antigravity.DrawBeams/CreateBeamCommand.cs"
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)

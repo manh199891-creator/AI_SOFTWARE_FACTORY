@@ -22,16 +22,26 @@
     },
     "allowed_paths": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+      },
       "minItems": 1
     },
     "forbidden_paths": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+      }
     },
     "required_files": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+      }
     },
     "required_symbols": {
       "type": "array",

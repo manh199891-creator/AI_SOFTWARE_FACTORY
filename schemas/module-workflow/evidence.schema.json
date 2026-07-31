@@ -7,7 +7,11 @@
     "schema_version": { "type": "integer", "const": 1 },
     "task_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
     "module_id": { "type": "string" },
-    "repository_root": { "type": "string" },
+    "repository_root": {
+      "type": "string",
+      "description": "Relative path to repository root — no absolute paths",
+      "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:).*"
+    },
     "branch": { "type": "string", "minLength": 1 },
     "base_commit": {
       "type": "string",
@@ -57,7 +61,10 @@
       "items": {
         "type": "object",
         "properties": {
-          "path": { "type": "string" },
+          "path": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+          },
           "line_start": { "type": "integer", "minimum": 1 },
           "line_end": { "type": "integer", "minimum": 1 },
           "reason": { "type": "string", "minLength": 1 }
