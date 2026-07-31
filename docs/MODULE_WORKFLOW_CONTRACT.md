@@ -79,3 +79,93 @@ No implementation of runners, scripts, or production pipeline hooks.
 
 ## 18. Example DrawBeams lifecycle
 See `examples/module-workflow/Antigravity.DrawBeams/`.
+
+---
+
+## Module bootstrap
+
+`module-init` initialises the canonical workflow and sandbox skeleton inside an **existing** module directory. It is invoked once per module during onboarding.
+
+### Command example
+
+```powershell
+# PowerShell wrapper
+.\skills\module-workflow\scripts\module_init.ps1 `
+  -RepositoryRoot "E:\AI_SOFTWARE_FACTORY" `
+  -ModuleRoot     "src\Antigravity.DrawBeams" `
+  -ModuleId       "antigravity.drawbeams" `
+  -ModuleName     "Antigravity.DrawBeams" `
+  -ProjectFile    "src\Antigravity.DrawBeams\Antigravity.DrawBeams.csproj" `
+  -Platform       "revit"
+
+# Python directly
+python skills/module-workflow/scripts/module_bootstrap.py \
+  --repository-root "E:\AI_SOFTWARE_FACTORY" \
+  --module-root     "src/Antigravity.DrawBeams" \
+  --module-id       "antigravity.drawbeams" \
+  --module-name     "Antigravity.DrawBeams" \
+  --project-file    "src/Antigravity.DrawBeams/Antigravity.DrawBeams.csproj" \
+  --platform        "revit" \
+  [--dry-run]
+```
+
+### Generated files
+
+| File | Source |
+|------|--------|
+| `.ai-workflow/MODULE.json` | Generated from CLI inputs |
+| `.ai-workflow/SCOPE.json` | Generated placeholder — status `DRAFT` |
+| `.ai-workflow/TASK.md` | Copied from canonical template |
+| `.ai-workflow/REVIEW.md` | Copied from canonical template |
+| `.ai-workflow/history/.gitkeep` | Empty tracked placeholder |
+| `.sandbox/README.md` | Copied from canonical template |
+
+### Generated directories
+
+```
+.ai-workflow/history/
+.sandbox/bin/
+.sandbox/obj/
+.sandbox/addin/
+.sandbox/test-models/
+.sandbox/logs/
+.sandbox/results/
+```
+
+### Protected branch rule
+
+Bootstrap refuses to run when the current Git branch is `main`, `master`, `develop`, or `release`. All workflow initialisation must happen on a task branch.
+
+### Conflict policy
+
+If any planner-owned file already exists with different content, the tool exits with reason code `BOOTSTRAP_CONFLICT` (exit 3) **before writing any file**. No partial state is left.
+
+### Idempotency
+
+Running `module-init` a second time with the same inputs returns `NO_CHANGES` (exit 0). No files are modified, no timestamps change, and no `.gitignore` block is duplicated.
+
+### `.gitignore` managed block
+
+The tool appends exactly one managed block to `<module-root>/.gitignore`:
+
+```gitignore
+# BEGIN AI MODULE WORKFLOW
+bin/
+obj/
+.sandbox/*
+!.sandbox/README.md
+# END AI MODULE WORKFLOW
+```
+
+Existing `.gitignore` content is preserved. The block is never duplicated on rerun.
+
+### Phase B non-goals
+
+- Does **not** run Antigravity or Codex.
+- Does **not** create task branches.
+- Does **not** build or copy DLLs.
+- Does **not** create `PLAN_LOCK.json`, `EVIDENCE.json`, `DELIVERY.json`, or `.sandbox/manifest.json`.
+- Does **not** sync to production add-in solution.
+- Does **not** overwrite a differing existing workflow contract.
+- Does **not** add third-party Python packages.
+- Does **not** touch the production runtime manifest.
