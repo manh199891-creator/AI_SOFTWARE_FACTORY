@@ -477,18 +477,260 @@ def test_write_failure_rolls_back_created_files(tmp_path: Path) -> None:
 
 
 def test_preexisting_files_are_never_deleted_during_rollback(tmp_path: Path) -> None:
-    repo, module_abs, csproj_abs = init_temp_repo(tmp_path)
-    # Create a pre-existing file inside the module that bootstrap should not touch
+    """
+    A pre-existing source file inside the module must survive even when a
+    write-failure rollback occurs. We trigger the failure via the .sandbox
+    blocker trick (pre-existing .sandbox file prevents mkdir(.sandbox/bin)).
+    """
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    # Pre-existing source file — must survive rollback
     pre_existing = module_abs / "MyExistingClass.cs"
     pre_existing.write_text("// existing\n", encoding="utf-8")
-    # Force a conflict so rollback triggers
-    ai_wf = module_abs / ".ai-workflow"
-    ai_wf.mkdir()
-    (ai_wf / "MODULE.json").write_text('{"bad": "data"}', encoding="utf-8")
-    run_bootstrap(repo)
-    # The pre-existing file must still exist
+    # Block .sandbox to force write failure → rollback
+    (module_abs / ".sandbox").write_text("blocker", encoding="utf-8")
+    result = run_bootstrap(repo)
+    assert result.returncode == 4
+    # Pre-existing source file must be intact
     assert pre_existing.exists()
     assert pre_existing.read_text(encoding="utf-8") == "// existing\n"
+    # The .sandbox blocker must still be a file (not deleted by rollback)
+    assert (module_abs / ".sandbox").is_file()
+
+
+# ---------------------------------------------------------------------------
+# Rollback restore tests (new for NEEDS_FIX)
+# ---------------------------------------------------------------------------
+
+
+def _make_temp_template_root(tmp_path: Path) -> Path:
+    """
+    Create a minimal but complete template root under tmp_path,
+    mirroring the structure of templates/module-workflow/.
+    Returns the factory root (parent of templates/).
+    """
+    real_tmpl = REPO_ROOT / "templates" / "module-workflow"
+    factory = tmp_path / "factory"
+    tmpl_dest = factory / "templates" / "module-workflow"
+    tmpl_dest.mkdir(parents=True)
+
+    # Copy all templates from the real location
+    import shutil
+    for item in real_tmpl.rglob("*"):
+        if item.is_file():
+            rel = item.relative_to(real_tmpl)
+            dest = tmpl_dest / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(item, dest)
+
+    return factory
+
+
+def _run_bootstrap_with_template_root(
+    repo: Path,
+    template_root: Path,
+    *extra_args: str,
+    module_rel: str = "src/Sample.DrawBeams",
+    csproj_rel: str = "src/Sample.DrawBeams/Sample.DrawBeams.csproj",
+    module_id: str = "sample.drawbeams",
+    module_name: str = "Sample.DrawBeams",
+    platform_: str = "revit",
+) -> subprocess.CompletedProcess:
+    args = [
+        sys.executable, str(BOOTSTRAP_SCRIPT),
+        "--repository-root", str(repo),
+        "--module-root", module_rel,
+        "--module-id", module_id,
+        "--module-name", module_name,
+        "--project-file", csproj_rel,
+        "--platform", platform_,
+        "--template-root", str(template_root),
+        *extra_args,
+    ]
+    return subprocess.run(args, capture_output=True, text=True)
+
+
+def test_rollback_restores_preexisting_gitignore(tmp_path: Path) -> None:
+    """
+    If a .gitignore pre-exists and gets updated, but a subsequent write fails,
+    rollback must restore the .gitignore to its original bytes exactly.
+    """
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    # Pre-existing .gitignore with custom content
+    original_gitignore = "# Custom rule\n*.user\n"
+    (module_abs / ".gitignore").write_text(original_gitignore, encoding="utf-8")
+    # Block .sandbox to force write failure after .gitignore is updated
+    (module_abs / ".sandbox").write_text("blocker", encoding="utf-8")
+    result = run_bootstrap(repo)
+    assert result.returncode == 4
+    out = parse_stdout(result)
+    assert out["reason_code"] == "BOOTSTRAP_WRITE_FAILED"
+    # .gitignore must be restored to exact original bytes
+    restored = (module_abs / ".gitignore").read_text(encoding="utf-8")
+    assert restored == original_gitignore, (
+        f"Expected original .gitignore content, got: {restored!r}"
+    )
+
+
+def test_rollback_removes_only_run_created_files(tmp_path: Path) -> None:
+    """
+    After rollback:
+    - Newly created workflow files must be deleted.
+    - Pre-existing source file must NOT be deleted.
+    - New empty directories must be removed.
+    - Pre-existing files and dirs must be untouched.
+    """
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    pre_existing_src = module_abs / "MyClass.cs"
+    pre_existing_src.write_text("// existing\n", encoding="utf-8")
+    # Pre-create .ai-workflow dir so it counts as pre-existing
+    ai_wf = module_abs / ".ai-workflow"
+    ai_wf.mkdir()
+    pre_existing_note = ai_wf / "NOTES.txt"
+    pre_existing_note.write_text("pre-existing note\n", encoding="utf-8")
+    # Block .sandbox to trigger rollback
+    (module_abs / ".sandbox").write_text("blocker", encoding="utf-8")
+    result = run_bootstrap(repo)
+    assert result.returncode == 4
+    # Pre-existing source file untouched
+    assert pre_existing_src.exists()
+    assert pre_existing_src.read_text(encoding="utf-8") == "// existing\n"
+    # Pre-existing note untouched
+    assert pre_existing_note.exists()
+    assert pre_existing_note.read_text(encoding="utf-8") == "pre-existing note\n"
+    # No workflow JSON files left behind
+    assert not (ai_wf / "MODULE.json").exists()
+    assert not (ai_wf / "SCOPE.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# Canonical template completeness tests
+# ---------------------------------------------------------------------------
+
+
+def test_missing_canonical_module_template_rejected(tmp_path: Path) -> None:
+    """Missing MODULE.json template file must cause CANONICAL_TEMPLATE_MISSING."""
+    repo, _, _ = init_temp_repo(tmp_path)
+    tmpl_root = _make_temp_template_root(tmp_path / "t1")
+    # Remove MODULE.json template
+    module_tmpl = tmpl_root / "templates" / "module-workflow" / ".ai-workflow" / "MODULE.json"
+    module_tmpl.unlink()
+    result = _run_bootstrap_with_template_root(repo, tmpl_root)
+    assert result.returncode == 2, result.stderr
+    out = parse_stdout(result)
+    assert out["reason_code"] == "CANONICAL_TEMPLATE_MISSING"
+    # No files written
+    module_abs = repo / "src" / "Sample.DrawBeams"
+    assert not (module_abs / ".ai-workflow").exists()
+    assert not (module_abs / ".sandbox").exists()
+
+
+def test_missing_canonical_scope_template_rejected(tmp_path: Path) -> None:
+    """Missing SCOPE.json template file must cause CANONICAL_TEMPLATE_MISSING."""
+    repo, _, _ = init_temp_repo(tmp_path)
+    tmpl_root = _make_temp_template_root(tmp_path / "t2")
+    scope_tmpl = tmpl_root / "templates" / "module-workflow" / ".ai-workflow" / "SCOPE.json"
+    scope_tmpl.unlink()
+    result = _run_bootstrap_with_template_root(repo, tmpl_root)
+    assert result.returncode == 2, result.stderr
+    out = parse_stdout(result)
+    assert out["reason_code"] == "CANONICAL_TEMPLATE_MISSING"
+    module_abs = repo / "src" / "Sample.DrawBeams"
+    assert not (module_abs / ".ai-workflow").exists()
+
+
+def test_invalid_canonical_json_template_rejected(tmp_path: Path) -> None:
+    """Unparseable JSON in canonical template must cause CANONICAL_TEMPLATE_MISSING."""
+    repo, _, _ = init_temp_repo(tmp_path)
+    tmpl_root = _make_temp_template_root(tmp_path / "t3")
+    module_tmpl = tmpl_root / "templates" / "module-workflow" / ".ai-workflow" / "MODULE.json"
+    module_tmpl.write_text("{ INVALID JSON !!!", encoding="utf-8")
+    result = _run_bootstrap_with_template_root(repo, tmpl_root)
+    assert result.returncode == 2, result.stderr
+    out = parse_stdout(result)
+    assert out["reason_code"] == "CANONICAL_TEMPLATE_MISSING"
+    module_abs = repo / "src" / "Sample.DrawBeams"
+    assert not (module_abs / ".ai-workflow").exists()
+
+
+# ---------------------------------------------------------------------------
+# Duplicate gitignore marker tests
+# ---------------------------------------------------------------------------
+
+
+def test_duplicate_gitignore_managed_blocks_rejected(tmp_path: Path) -> None:
+    """Two complete BEGIN/END blocks must cause GITIGNORE_MANAGED_BLOCK_INVALID."""
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    block = "# BEGIN AI MODULE WORKFLOW\nbin/\n# END AI MODULE WORKFLOW\n"
+    (module_abs / ".gitignore").write_text(block + "\n" + block, encoding="utf-8")
+    result = run_bootstrap(repo)
+    assert result.returncode == 2
+    out = parse_stdout(result)
+    assert out["reason_code"] == "GITIGNORE_MANAGED_BLOCK_INVALID"
+    assert not (module_abs / ".ai-workflow").exists()
+    assert not (module_abs / ".sandbox").exists()
+
+
+def test_duplicate_begin_marker_rejected(tmp_path: Path) -> None:
+    """Two BEGIN markers (one END) must cause GITIGNORE_MANAGED_BLOCK_INVALID."""
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    content = (
+        "# BEGIN AI MODULE WORKFLOW\n"
+        "bin/\n"
+        "# BEGIN AI MODULE WORKFLOW\n"
+        "# END AI MODULE WORKFLOW\n"
+    )
+    (module_abs / ".gitignore").write_text(content, encoding="utf-8")
+    result = run_bootstrap(repo)
+    assert result.returncode == 2
+    out = parse_stdout(result)
+    assert out["reason_code"] == "GITIGNORE_MANAGED_BLOCK_INVALID"
+    assert not (module_abs / ".ai-workflow").exists()
+
+
+def test_duplicate_end_marker_rejected(tmp_path: Path) -> None:
+    """One BEGIN, two END markers must cause GITIGNORE_MANAGED_BLOCK_INVALID."""
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    content = (
+        "# BEGIN AI MODULE WORKFLOW\n"
+        "bin/\n"
+        "# END AI MODULE WORKFLOW\n"
+        "# END AI MODULE WORKFLOW\n"
+    )
+    (module_abs / ".gitignore").write_text(content, encoding="utf-8")
+    result = run_bootstrap(repo)
+    assert result.returncode == 2
+    out = parse_stdout(result)
+    assert out["reason_code"] == "GITIGNORE_MANAGED_BLOCK_INVALID"
+    assert not (module_abs / ".ai-workflow").exists()
+
+
+# ---------------------------------------------------------------------------
+# Nonexistent repository root — must return JSON, not traceback
+# ---------------------------------------------------------------------------
+
+
+def test_nonexistent_repository_root_returns_json_failure(tmp_path: Path) -> None:
+    """
+    Passing a non-existent RepositoryRoot must return a valid JSON failure object
+    on stdout — NOT a Python traceback — and exit code 2.
+    """
+    nonexistent = tmp_path / "does" / "not" / "exist"
+    args = [
+        sys.executable, str(BOOTSTRAP_SCRIPT),
+        "--repository-root", str(nonexistent),
+        "--module-root", "src/Sample",
+        "--module-id", "sample",
+        "--module-name", "Sample",
+        "--project-file", "src/Sample/Sample.csproj",
+        "--platform", "dotnet",
+    ]
+    result = subprocess.run(args, capture_output=True, text=True)
+    assert result.returncode == 2, f"Expected exit 2, got {result.returncode}\n{result.stderr}"
+    # stdout must parse as a single valid JSON object — no traceback
+    out = json.loads(result.stdout)
+    assert isinstance(out, dict)
+    assert out["reason_code"] == "NOT_A_GIT_REPOSITORY"
+    assert out["status"] == "FAILED"
 
 
 # ---------------------------------------------------------------------------

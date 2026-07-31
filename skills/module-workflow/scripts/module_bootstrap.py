@@ -22,11 +22,10 @@ import argparse
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -46,6 +45,18 @@ obj/
 PROTECTED_BRANCHES = {"main", "master", "develop", "release"}
 MODULE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+
+# Canonical template paths (relative to templates/module-workflow/)
+MARKDOWN_TEMPLATES = [
+    ".ai-workflow/TASK.md",
+    ".ai-workflow/REVIEW.md",
+    ".sandbox/README.md",
+]
+JSON_TEMPLATES = [
+    ".ai-workflow/MODULE.json",
+    ".ai-workflow/SCOPE.json",
+]
+ALL_REQUIRED_TEMPLATES = MARKDOWN_TEMPLATES + JSON_TEMPLATES
 
 # Planner-owned targets (relative to module root)
 PLANNER_OWNED = [
@@ -105,13 +116,16 @@ def fail(reason_code: str, message: str, exit_code: int = 2, **kwargs) -> None:
 
 
 def run_git(args: list[str], cwd: str) -> tuple[int, str, str]:
-    result = subprocess.run(
-        ["git"] + args,
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-    )
-    return result.returncode, result.stdout.strip(), result.stderr.strip()
+    try:
+        result = subprocess.run(
+            ["git"] + args,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+    except (FileNotFoundError, OSError) as exc:
+        return 1, "", str(exc)
 
 
 def get_git_root(repo_root: str) -> str | None:
@@ -159,7 +173,7 @@ def validate_inside_repo(abs_path: Path, repo_abs: Path, field: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Template resolution
+# Template resolution and validation
 # ---------------------------------------------------------------------------
 
 
@@ -175,6 +189,30 @@ def find_template_root(script_path: Path) -> Path:
             return candidate
         candidate = candidate.parent
     raise FileNotFoundError("Cannot locate templates/module-workflow/ relative to script.")
+
+
+def validate_canonical_templates(template_root: Path) -> None:
+    """
+    Verify all required canonical template files exist.
+    JSON templates (.json) must also parse without error.
+    Calls fail() with CANONICAL_TEMPLATE_MISSING on any problem.
+    No files are written.
+    """
+    for rel in ALL_REQUIRED_TEMPLATES:
+        path = template_root / "templates" / "module-workflow" / rel
+        if not path.exists():
+            fail(
+                "CANONICAL_TEMPLATE_MISSING",
+                f"Required canonical template missing: {path}",
+            )
+        if path.suffix == ".json":
+            try:
+                json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError) as exc:
+                fail(
+                    "CANONICAL_TEMPLATE_MISSING",
+                    f"Canonical template is not valid JSON: {path} — {exc}",
+                )
 
 
 def read_template(template_root: Path, rel: str) -> str:
@@ -261,30 +299,56 @@ def parse_gitignore(content: str) -> tuple[str, str, str] | None:
     """
     Returns (before, block, after) if managed block exists and is valid.
     Returns None if no managed block.
-    Calls fail() if block is malformed (BEGIN without END).
+    Calls fail() if block is malformed:
+      - BEGIN without END (or vice versa)
+      - Multiple BEGIN or END markers
+      - END appears before BEGIN
     """
-    begin_idx = content.find(GITIGNORE_BEGIN)
-    end_idx = content.find(GITIGNORE_END)
-    if begin_idx == -1 and end_idx == -1:
+    begin_count = content.count(GITIGNORE_BEGIN)
+    end_count = content.count(GITIGNORE_END)
+
+    # No managed block at all — clean state
+    if begin_count == 0 and end_count == 0:
         return None
-    if begin_idx != -1 and end_idx == -1:
+
+    # Duplicate markers
+    if begin_count > 1:
+        fail(
+            "GITIGNORE_MANAGED_BLOCK_INVALID",
+            f".gitignore contains {begin_count} BEGIN AI MODULE WORKFLOW markers; expected at most 1.",
+            exit_code=2,
+        )
+    if end_count > 1:
+        fail(
+            "GITIGNORE_MANAGED_BLOCK_INVALID",
+            f".gitignore contains {end_count} END AI MODULE WORKFLOW markers; expected at most 1.",
+            exit_code=2,
+        )
+
+    # Mismatched single markers
+    if begin_count == 1 and end_count == 0:
         fail(
             "GITIGNORE_MANAGED_BLOCK_INVALID",
             ".gitignore has BEGIN AI MODULE WORKFLOW marker but END marker is missing.",
             exit_code=2,
         )
-    if begin_idx == -1 and end_idx != -1:
+    if begin_count == 0 and end_count == 1:
         fail(
             "GITIGNORE_MANAGED_BLOCK_INVALID",
             ".gitignore has END AI MODULE WORKFLOW marker but BEGIN marker is missing.",
             exit_code=2,
         )
+
+    # Both present — check ordering
+    begin_idx = content.find(GITIGNORE_BEGIN)
+    end_idx = content.find(GITIGNORE_END)
     if end_idx < begin_idx:
         fail(
             "GITIGNORE_MANAGED_BLOCK_INVALID",
             ".gitignore END marker appears before BEGIN marker.",
             exit_code=2,
         )
+
     before = content[:begin_idx]
     end_pos = end_idx + len(GITIGNORE_END)
     block = content[begin_idx:end_pos]
@@ -314,15 +378,27 @@ def compute_gitignore_content(existing: str) -> tuple[str, bool]:
 
 
 # ---------------------------------------------------------------------------
-# Atomic write helpers
+# Atomic write helpers — with pre-existing file restore on rollback
 # ---------------------------------------------------------------------------
 
 
 class BootstrapWriter:
-    """Tracks what this run creates so rollback is precise."""
+    """
+    Tracks what this run creates or modifies so rollback is precise.
+
+    Distinction:
+      _created_files  — files that did NOT exist before this run.
+                        Rollback: delete.
+      _modified_files — files that DID exist before this run
+                        (e.g. .gitignore with managed block appended).
+                        Rollback: restore original bytes from memory.
+      _created_dirs   — directories that did NOT exist before this run.
+                        Rollback: rmdir if empty.
+    """
 
     def __init__(self) -> None:
         self._created_files: list[Path] = []
+        self._modified_files: list[tuple[Path, bytes]] = []  # (path, original_bytes)
         self._created_dirs: list[Path] = []
 
     def mkdir(self, path: Path) -> bool:
@@ -333,21 +409,31 @@ class BootstrapWriter:
         self._created_dirs.append(path)
         return True
 
-    def write_file(self, path: Path, content: str | bytes) -> None:
+    def write_new_file(self, path: Path, content: str | bytes) -> None:
+        """Write a file that does NOT yet exist. Tracked as created."""
+        self._atomic_write(path, content)
+        self._created_files.append(path)
+
+    def overwrite_existing_file(self, path: Path, content: str | bytes) -> None:
+        """
+        Overwrite a file that ALREADY exists.
+        Saves original bytes in memory for rollback restore.
+        """
+        original = path.read_bytes()
+        self._atomic_write(path, content)
+        self._modified_files.append((path, original))
+
+    def _atomic_write(self, path: Path, content: str | bytes) -> None:
         """Write via temp file + os.replace for atomicity."""
         dir_ = path.parent
         dir_.mkdir(parents=True, exist_ok=True)
         suffix = path.suffix or ".tmp"
         fd, tmp = tempfile.mkstemp(dir=dir_, suffix=suffix + ".tmp")
         try:
-            if isinstance(content, str):
-                content_bytes = content.encode("utf-8")
-            else:
-                content_bytes = content
+            content_bytes = content.encode("utf-8") if isinstance(content, str) else content
             os.write(fd, content_bytes)
             os.close(fd)
             os.replace(tmp, path)
-            self._created_files.append(path)
         except Exception:
             try:
                 os.close(fd)
@@ -360,11 +446,19 @@ class BootstrapWriter:
             raise
 
     def rollback(self) -> None:
+        # Delete newly created files
         for f in reversed(self._created_files):
             try:
                 f.unlink(missing_ok=True)
             except Exception:
                 pass
+        # Restore pre-existing files to original bytes
+        for path, original_bytes in reversed(self._modified_files):
+            try:
+                path.write_bytes(original_bytes)
+            except Exception:
+                pass
+        # Remove newly created directories (deepest first, only if empty)
         for d in sorted(self._created_dirs, key=lambda p: len(p.parts), reverse=True):
             try:
                 if d.exists() and not any(d.iterdir()):
@@ -375,6 +469,10 @@ class BootstrapWriter:
     @property
     def created_files(self) -> list[Path]:
         return list(self._created_files)
+
+    @property
+    def modified_files(self) -> list[Path]:
+        return [p for p, _ in self._modified_files]
 
     @property
     def created_dirs(self) -> list[Path]:
@@ -395,6 +493,10 @@ def bootstrap(args: argparse.Namespace) -> None:
     # ------------------------------------------------------------------
     repo_root_str: str = args.repository_root
     repo_abs = Path(repo_root_str).resolve()
+
+    # Check that RepositoryRoot exists and is a directory before calling Git
+    if not repo_abs.exists() or not repo_abs.is_dir():
+        fail("NOT_A_GIT_REPOSITORY", f"RepositoryRoot does not exist or is not a directory: {repo_abs}")
 
     git_root = get_git_root(str(repo_abs))
     if git_root is None:
@@ -472,12 +574,17 @@ def bootstrap(args: argparse.Namespace) -> None:
         fail("INVALID_DLL_NAME", f"dll-name must not contain path separators: {dll_name!r}")
 
     # ------------------------------------------------------------------
-    # 5. Locate templates
+    # 5. Locate and validate canonical templates (all must exist + JSON must parse)
     # ------------------------------------------------------------------
-    try:
-        tmpl_root = find_template_root(script_path)
-    except FileNotFoundError as e:
-        fail("CANONICAL_TEMPLATE_MISSING", str(e))
+    if args.template_root:
+        tmpl_root = Path(args.template_root).resolve()
+    else:
+        try:
+            tmpl_root = find_template_root(script_path)
+        except FileNotFoundError as e:
+            fail("CANONICAL_TEMPLATE_MISSING", str(e))
+
+    validate_canonical_templates(tmpl_root)
 
     task_md_content = read_template(tmpl_root, ".ai-workflow/TASK.md")
     review_md_content = read_template(tmpl_root, ".ai-workflow/REVIEW.md")
@@ -524,10 +631,11 @@ def bootstrap(args: argparse.Namespace) -> None:
         module_abs / ".sandbox" / "results",
     ]
 
-    # .gitignore
+    # .gitignore — read and validate BEFORE any write decision
     gitignore_path = module_abs / ".gitignore"
-    existing_gitignore = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
-    # Validate before computing (will call fail() if malformed)
+    gitignore_preexisted = gitignore_path.exists()
+    existing_gitignore = gitignore_path.read_text(encoding="utf-8") if gitignore_preexisted else ""
+    # validate_canonical_templates was already called; parse_gitignore will fail() on invalid block
     parse_gitignore(existing_gitignore)
     new_gitignore, gitignore_updated = compute_gitignore_content(existing_gitignore)
 
@@ -561,9 +669,7 @@ def bootstrap(args: argparse.Namespace) -> None:
     # ------------------------------------------------------------------
     # 8. Determine which files actually need to be created
     # ------------------------------------------------------------------
-    files_to_create = {p: c for p, c in planned_files.items() if p not in [repo_abs / f for f in files_preserved] and not p.exists()}
-
-    dirs_already_exist = [d for d in planned_dirs if d.exists()]
+    files_to_create = {p: c for p, c in planned_files.items() if not p.exists()}
     dirs_to_create = [d for d in planned_dirs if not d.exists()]
 
     all_unchanged = (
@@ -575,6 +681,11 @@ def bootstrap(args: argparse.Namespace) -> None:
     # ------------------------------------------------------------------
     # 9. Dry run — report and exit
     # ------------------------------------------------------------------
+    # Determine dry-run gitignore label
+    dry_gitignore_files = []
+    if gitignore_updated:
+        dry_gitignore_files = [str(gitignore_path.relative_to(repo_abs))]
+
     if dry_run:
         result = make_output(
             status="DRY_RUN",
@@ -583,7 +694,7 @@ def bootstrap(args: argparse.Namespace) -> None:
             module_root=module_root_rel,
             branch=branch,
             dry_run=True,
-            files_created=[str(p.relative_to(repo_abs)) for p in files_to_create],
+            files_created=[str(p.relative_to(repo_abs)) for p in files_to_create] + dry_gitignore_files,
             files_preserved=files_preserved,
             directories_created=[str(d.relative_to(repo_abs)) for d in dirs_to_create],
             gitignore_updated=gitignore_updated,
@@ -631,10 +742,15 @@ def bootstrap(args: argparse.Namespace) -> None:
             writer.mkdir(d)
 
         for target, content in files_to_create.items():
-            writer.write_file(target, content)
+            writer.write_new_file(target, content)
 
         if gitignore_updated:
-            writer.write_file(gitignore_path, new_gitignore)
+            if gitignore_preexisted:
+                # Pre-existing file — use overwrite path so rollback restores bytes
+                writer.overwrite_existing_file(gitignore_path, new_gitignore)
+            else:
+                # New file — use create path
+                writer.write_new_file(gitignore_path, new_gitignore)
 
     except Exception as exc:
         print(f"[ERROR] Write failed: {exc}", file=sys.stderr, flush=True)
@@ -651,8 +767,17 @@ def bootstrap(args: argparse.Namespace) -> None:
         sys.exit(4)
 
     # ------------------------------------------------------------------
-    # 12. Success output
+    # 12. Build files_created list
+    # files_created = newly created files (NOT pre-existing .gitignore that was updated)
+    # gitignore_updated flag already signals the .gitignore change
     # ------------------------------------------------------------------
+    all_created_paths = writer.created_files
+    # Exclude .gitignore from files_created if it was pre-existing (it goes in gitignore_updated)
+    reported_created = [
+        p for p in all_created_paths
+        if not (p == gitignore_path and gitignore_preexisted)
+    ]
+
     result = make_output(
         status="CREATED",
         reason_code="BOOTSTRAP_CREATED",
@@ -660,7 +785,7 @@ def bootstrap(args: argparse.Namespace) -> None:
         module_root=module_root_rel,
         branch=branch,
         dry_run=False,
-        files_created=[str(p.relative_to(repo_abs)) for p in writer.created_files],
+        files_created=[str(p.relative_to(repo_abs)) for p in reported_created],
         files_preserved=files_preserved,
         directories_created=[str(d.relative_to(repo_abs)) for d in writer.created_dirs],
         gitignore_updated=gitignore_updated,
@@ -698,6 +823,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Repository-relative shared dependency path (repeatable).")
     p.add_argument("--workflow-version", default="1.0.0", help="Semantic version (default: 1.0.0).")
     p.add_argument("--dry-run", action="store_true", help="Preview mode — no files written.")
+    p.add_argument("--template-root", default="", help=argparse.SUPPRESS)  # test-only override
     return p
 
 
