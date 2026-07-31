@@ -8,8 +8,12 @@
     "task_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
     "module_id": { "type": "string" },
     "repository_root": { "type": "string" },
-    "branch": { "type": "string" },
-    "base_commit": { "type": "string" },
+    "branch": { "type": "string", "minLength": 1 },
+    "base_commit": {
+      "type": "string",
+      "description": "Git commit SHA of the base",
+      "pattern": "^[a-f0-9]{40}([a-f0-9]{24})?$"
+    },
     "task_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "scope_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "plan_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
@@ -18,9 +22,12 @@
       "items": {
         "type": "object",
         "properties": {
-          "path": { "type": "string" },
+          "path": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+          },
           "exists": { "type": "boolean" },
-          "evidence_command": { "type": "string" }
+          "evidence_command": { "type": "string", "minLength": 1 }
         },
         "required": ["path", "exists", "evidence_command"],
         "additionalProperties": false
@@ -33,7 +40,7 @@
         "type": "object",
         "properties": {
           "symbol": { "type": "string" },
-          "evidence_command": { "type": "string" },
+          "evidence_command": { "type": "string", "minLength": 1 },
           "matches": {
             "type": "array",
             "items": { "type": "string" },
@@ -53,7 +60,7 @@
           "path": { "type": "string" },
           "line_start": { "type": "integer", "minimum": 1 },
           "line_end": { "type": "integer", "minimum": 1 },
-          "reason": { "type": "string" }
+          "reason": { "type": "string", "minLength": 1 }
         },
         "required": ["path", "line_start", "line_end", "reason"],
         "additionalProperties": false

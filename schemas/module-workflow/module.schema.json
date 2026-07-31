@@ -5,27 +5,57 @@
   "description": "Module configuration for AI workflow",
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
-    "module_id": { "type": "string", "description": "Lowercase machine identifier for the module" },
+    "module_id": {
+      "type": "string",
+      "description": "Lowercase machine identifier for the module",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
     "module_name": { "type": "string" },
-    "module_root": { "type": "string", "description": "Relative path to the module root" },
-    "project_file": { "type": "string" },
+    "module_root": {
+      "type": "string",
+      "description": "Relative path to the module root — no absolute or escaping paths",
+      "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+    },
+    "project_file": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+    },
     "platform": {
       "type": "string",
       "enum": ["revit", "navisworks", "dotnet"]
     },
-    "workflow_root": { "type": "string" },
-    "sandbox_root": { "type": "string" },
-    "sandbox_dll": { "type": "string" },
-    "stable_output_root": { "type": "string" },
+    "workflow_root": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+    },
+    "sandbox_root": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+    },
+    "sandbox_dll": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+    },
+    "stable_output_root": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+    },
     "default_test_paths": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
+      }
     },
     "shared_dependencies": {
       "type": "array",
       "items": { "type": "string" }
     },
-    "workflow_version": { "type": "string" }
+    "workflow_version": {
+      "type": "string",
+      "description": "Semantic version",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    }
   },
   "required": [
     "schema_version",

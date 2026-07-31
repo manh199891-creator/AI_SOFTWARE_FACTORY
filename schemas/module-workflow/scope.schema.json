@@ -8,11 +8,21 @@
     "task_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
     "module_id": { "type": "string" },
     "base_branch": { "type": "string" },
-    "work_branch": { "type": "string" },
-    "base_commit": { "type": "string" },
+    "work_branch": {
+      "type": "string",
+      "description": "Task branch — must not be a protected branch name",
+      "not": {
+        "enum": ["main", "master", "develop", "release"]
+      }
+    },
+    "base_commit": {
+      "type": "string",
+      "description": "Git commit SHA of the base",
+      "pattern": "^[a-f0-9]{40}([a-f0-9]{24})?$"
+    },
     "allowed_paths": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": { "type": "string", "minLength": 1 },
       "minItems": 1
     },
     "forbidden_paths": {
@@ -31,7 +41,7 @@
     "max_changed_lines": { "type": "integer", "minimum": 1 },
     "test_commands": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": { "type": "string", "minLength": 1 }
     },
     "sandbox_build": { "type": "boolean" },
     "direct_main_changes": { "type": "boolean", "const": false },
