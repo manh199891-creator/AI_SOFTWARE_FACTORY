@@ -11,7 +11,21 @@ PROJECT_ROOT = FACTORY_ROOT / PROJECT_NAME
 
 def setup_test_env():
     if PROJECT_ROOT.exists():
-        shutil.rmtree(PROJECT_ROOT)
+        last_error = None
+        for _ in range(5):
+            try:
+                shutil.rmtree(PROJECT_ROOT)
+                last_error = None
+                break
+            except OSError as exc:
+                last_error = exc
+                import time
+                time.sleep(0.5)
+        
+        if last_error is not None:
+            raise RuntimeError(
+                f"Unable to clean test project: {PROJECT_ROOT}"
+            ) from last_error
         
     for sub in [".agent/context", ".agent/reports", ".agent/state", "source-code"]:
         (PROJECT_ROOT / sub).mkdir(parents=True, exist_ok=True)
@@ -1534,7 +1548,9 @@ def main():
         traceback.print_exc()
         sys.exit(1)
     except Exception as e:
+        import traceback
         print(f"\nTEST CRASHED: {e}")
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
