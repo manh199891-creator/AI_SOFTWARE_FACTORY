@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Evidence Schema",
+  "type": "object",
+  "description": "Evidence collected prior to making code changes",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "task_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "module_id": { "type": "string" },
+    "repository_root": { "type": "string" },
+    "branch": { "type": "string" },
+    "base_commit": { "type": "string" },
+    "task_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "scope_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "plan_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "files_verified": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "exists": { "type": "boolean" },
+          "evidence_command": { "type": "string" }
+        },
+        "required": ["path", "exists", "evidence_command"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "symbols_verified": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string" },
+          "evidence_command": { "type": "string" },
+          "matches": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        },
+        "required": ["symbol", "evidence_command", "matches"],
+        "additionalProperties": false
+      }
+    },
+    "diagnosis": { "type": "string", "minLength": 1 },
+    "diagnosis_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "line_start": { "type": "integer", "minimum": 1 },
+          "line_end": { "type": "integer", "minimum": 1 },
+          "reason": { "type": "string" }
+        },
+        "required": ["path", "line_start", "line_end", "reason"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "ready_to_implement": { "type": "boolean" }
+  },
+  "required": [
+    "schema_version",
+    "task_id",
+    "module_id",
+    "repository_root",
+    "branch",
+    "base_commit",
+    "task_sha256",
+    "scope_sha256",
+    "plan_sha256",
+    "files_verified",
+    "symbols_verified",
+    "diagnosis",
+    "diagnosis_sources",
+    "ready_to_implement"
+  ],
+  "additionalProperties": false
+}

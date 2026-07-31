@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Scope Schema",
+  "type": "object",
+  "description": "Machine-readable scope contract for a task",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "task_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "module_id": { "type": "string" },
+    "base_branch": { "type": "string" },
+    "work_branch": { "type": "string" },
+    "base_commit": { "type": "string" },
+    "allowed_paths": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "forbidden_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "required_files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "required_symbols": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "max_files_changed": { "type": "integer", "minimum": 1 },
+    "max_changed_lines": { "type": "integer", "minimum": 1 },
+    "test_commands": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "sandbox_build": { "type": "boolean" },
+    "direct_main_changes": { "type": "boolean", "const": false },
+    "auto_merge": { "type": "boolean", "const": false },
+    "status": {
+      "type": "string",
+      "enum": ["DRAFT", "READY", "LOCKED", "AMENDMENT_REQUIRED"]
+    }
+  },
+  "required": [
+    "schema_version",
+    "task_id",
+    "module_id",
+    "base_branch",
+    "work_branch",
+    "base_commit",
+    "allowed_paths",
+    "forbidden_paths",
+    "required_files",
+    "required_symbols",
+    "max_files_changed",
+    "max_changed_lines",
+    "test_commands",
+    "sandbox_build",
+    "direct_main_changes",
+    "auto_merge",
+    "status"
+  ],
+  "additionalProperties": false
+}

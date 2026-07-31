@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "task_id": "drawbeams-fix-corridor",
+  "module_id": "antigravity-drawbeams",
+  "base_branch": "main",
+  "work_branch": "task/drawbeams-fix-corridor",
+  "base_commit": "1111111111111111111111111111111111111111",
+  "allowed_paths": [
+    "src/Antigravity.DrawBeams/**"
+  ],
+  "forbidden_paths": [
+    "src/Antigravity.OtherAddin/**",
+    ".github/**"
+  ],
+  "required_files": [
+    "src/Antigravity.DrawBeams/Antigravity.DrawBeams.csproj"
+  ],
+  "required_symbols": [],
+  "max_files_changed": 5,
+  "max_changed_lines": 300,
+  "test_commands": [
+    "dotnet test tests/Antigravity.DrawBeams.Tests/Antigravity.DrawBeams.Tests.csproj"
+  ],
+  "sandbox_build": true,
+  "direct_main_changes": false,
+  "auto_merge": false,
+  "status": "READY"
+}

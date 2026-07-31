@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "replace-task-id",
+  "module_id": "replace-module-id",
+  "base_branch": "main",
+  "work_branch": "task/replace-task-id",
+  "base_commit": "replace-base-commit",
+  "allowed_paths": [
+    "src/Replace.ModuleName/**"
+  ],
+  "forbidden_paths": [
+    ".github/**"
+  ],
+  "required_files": [
+    "src/Replace.ModuleName/Replace.ModuleName.csproj"
+  ],
+  "required_symbols": [],
+  "max_files_changed": 5,
+  "max_changed_lines": 300,
+  "test_commands": [],
+  "sandbox_build": true,
+  "direct_main_changes": false,
+  "auto_merge": false,
+  "status": "DRAFT"
+}

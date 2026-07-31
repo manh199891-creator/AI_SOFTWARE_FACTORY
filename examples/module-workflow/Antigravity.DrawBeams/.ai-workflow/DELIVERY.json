@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "task_id": "drawbeams-fix-corridor",
+  "delivery_round": 1,
+  "status": "READY_FOR_REVIEW",
+  "branch": "task/drawbeams-fix-corridor",
+  "base_commit": "1111111111111111111111111111111111111111",
+  "commit_sha": "2222222222222222222222222222222222222222",
+  "remote_sha": "2222222222222222222222222222222222222222",
+  "sha_match": true,
+  "task_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "scope_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "plan_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "files_changed": [
+    "src/Antigravity.DrawBeams/CreateBeamCommand.cs"
+  ],
+  "scope_check": "PASS",
+  "tests": [
+    {
+      "command": "dotnet test tests/Antigravity.DrawBeams.Tests/Antigravity.DrawBeams.Tests.csproj",
+      "exit_code": 0,
+      "result": "PASS",
+      "report_path": ".sandbox/results/unit-tests.trx"
+    }
+  ],
+  "sandbox_manifest": ".sandbox/manifest.json",
+  "sandbox_dll_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "working_tree_clean": true,
+  "blockers": []
+}

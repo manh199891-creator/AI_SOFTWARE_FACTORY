@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "module_id": "antigravity-drawbeams",
+  "module_name": "Antigravity.DrawBeams",
+  "module_root": "src/Antigravity.DrawBeams",
+  "project_file": "src/Antigravity.DrawBeams/Antigravity.DrawBeams.csproj",
+  "platform": "revit",
+  "workflow_root": "src/Antigravity.DrawBeams/.ai-workflow",
+  "sandbox_root": "src/Antigravity.DrawBeams/.sandbox",
+  "sandbox_dll": "src/Antigravity.DrawBeams/.sandbox/bin/Antigravity.DrawBeams.dll",
+  "stable_output_root": "src/Antigravity.DrawBeams/bin",
+  "default_test_paths": [
+    "src/Antigravity.DrawBeams/Tests"
+  ],
+  "shared_dependencies": [],
+  "workflow_version": "1.0.0"
+}

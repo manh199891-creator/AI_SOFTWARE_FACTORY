@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "task_id": "drawbeams-fix-corridor",
+  "module_id": "antigravity-drawbeams",
+  "repository_root": ".",
+  "branch": "task/drawbeams-fix-corridor",
+  "base_commit": "1111111111111111111111111111111111111111",
+  "task_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "scope_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "plan_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "files_verified": [
+    {
+      "path": "src/Antigravity.DrawBeams/CreateBeamCommand.cs",
+      "exists": true,
+      "evidence_command": "git ls-files --error-unmatch src/Antigravity.DrawBeams/CreateBeamCommand.cs"
+    }
+  ],
+  "symbols_verified": [
+    {
+      "symbol": "CreateBeamCommand",
+      "evidence_command": "git grep -n \"CreateBeamCommand\"",
+      "matches": [
+        "src/Antigravity.DrawBeams/CreateBeamCommand.cs:10"
+      ]
+    }
+  ],
+  "diagnosis": "The command does not validate the selected beam input before execution.",
+  "diagnosis_sources": [
+    {
+      "path": "src/Antigravity.DrawBeams/CreateBeamCommand.cs",
+      "line_start": 20,
+      "line_end": 35,
+      "reason": "Input is used without the required validation."
+    }
+  ],
+  "ready_to_implement": true
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "task_id": "drawbeams-fix-corridor",
+  "plan_status": "APPROVED",
+  "task_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "scope_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "plan_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "approved_by": "codex",
+  "approved_review_run": "plan-review-run-001",
+  "approved_at": "2026-07-31T06:00:00Z",
+  "base_commit": "1111111111111111111111111111111111111111",
+  "amendment_count": 0
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Delivery Schema",
+  "type": "object",
+  "description": "Delivery contract after commit and push",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "task_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "delivery_round": { "type": "integer", "minimum": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["READY_FOR_REVIEW", "BLOCKED", "FAILED"]
+    },
+    "branch": { "type": "string" },
+    "base_commit": { "type": "string" },
+    "commit_sha": { "type": "string" },
+    "remote_sha": { "type": "string" },
+    "sha_match": { "type": "boolean" },
+    "task_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "scope_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "plan_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "files_changed": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scope_check": {
+      "type": "string",
+      "enum": ["PASS", "FAIL"]
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" },
+          "exit_code": { "type": "integer" },
+          "result": { "type": "string", "enum": ["PASS", "FAIL", "SKIPPED"] },
+          "report_path": { "type": "string" }
+        },
+        "required": ["command", "exit_code", "result", "report_path"],
+        "additionalProperties": false
+      }
+    },
+    "sandbox_manifest": { "type": "string" },
+    "sandbox_dll_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "working_tree_clean": { "type": "boolean" },
+    "blockers": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": [
+    "schema_version",
+    "task_id",
+    "delivery_round",
+    "status",
+    "branch",
+    "base_commit",
+    "commit_sha",
+    "remote_sha",
+    "sha_match",
+    "task_sha256",
+    "scope_sha256",
+    "plan_sha256",
+    "files_changed",
+    "scope_check",
+    "tests",
+    "sandbox_manifest",
+    "working_tree_clean",
+    "blockers"
+  ],
+  "additionalProperties": false
+}

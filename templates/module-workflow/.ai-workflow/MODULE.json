@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "module_id": "replace-module-id",
+  "module_name": "Replace.ModuleName",
+  "module_root": "src/Replace.ModuleName",
+  "project_file": "src/Replace.ModuleName/Replace.ModuleName.csproj",
+  "platform": "revit",
+  "workflow_root": "src/Replace.ModuleName/.ai-workflow",
+  "sandbox_root": "src/Replace.ModuleName/.sandbox",
+  "sandbox_dll": "src/Replace.ModuleName/.sandbox/bin/Replace.ModuleName.dll",
+  "stable_output_root": "src/Replace.ModuleName/bin",
+  "default_test_paths": [],
+  "shared_dependencies": [],
+  "workflow_version": "1.0.0"
+}

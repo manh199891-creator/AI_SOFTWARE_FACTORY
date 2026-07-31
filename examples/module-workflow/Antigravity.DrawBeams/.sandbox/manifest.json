@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "task_id": "drawbeams-fix-corridor",
+  "module_id": "antigravity-drawbeams",
+  "branch": "task/drawbeams-fix-corridor",
+  "source_commit": "2222222222222222222222222222222222222222",
+  "source_snapshot_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "configuration": "Debug",
+  "project_file": "src/Antigravity.DrawBeams/Antigravity.DrawBeams.csproj",
+  "dll": ".sandbox/bin/Antigravity.DrawBeams.dll",
+  "dll_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "built_at": "2026-07-31T06:30:00Z",
+  "test_status": "PASS",
+  "test_results": [
+    ".sandbox/results/unit-tests.trx"
+  ]
+}

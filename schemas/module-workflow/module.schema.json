@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Module Schema",
+  "type": "object",
+  "description": "Module configuration for AI workflow",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "module_id": { "type": "string", "description": "Lowercase machine identifier for the module" },
+    "module_name": { "type": "string" },
+    "module_root": { "type": "string", "description": "Relative path to the module root" },
+    "project_file": { "type": "string" },
+    "platform": {
+      "type": "string",
+      "enum": ["revit", "navisworks", "dotnet"]
+    },
+    "workflow_root": { "type": "string" },
+    "sandbox_root": { "type": "string" },
+    "sandbox_dll": { "type": "string" },
+    "stable_output_root": { "type": "string" },
+    "default_test_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "shared_dependencies": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "workflow_version": { "type": "string" }
+  },
+  "required": [
+    "schema_version",
+    "module_id",
+    "module_name",
+    "module_root",
+    "project_file",
+    "platform",
+    "workflow_root",
+    "sandbox_root",
+    "sandbox_dll",
+    "stable_output_root",
+    "default_test_paths",
+    "shared_dependencies",
+    "workflow_version"
+  ],
+  "additionalProperties": false
+}
