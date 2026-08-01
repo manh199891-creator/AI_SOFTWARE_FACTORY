@@ -1339,9 +1339,10 @@ def test_git_status_failure_is_not_clean(tmp_path: Path, monkeypatch: pytest.Mon
 
     monkeypatch.setattr(evidence_gate, "run_git", mock_run_git)
 
-    dirty_p, err_code = evidence_gate.check_source_dirty(repo, "src/Antigravity.DrawBeams")
+    dirty_p, err_code = evidence_gate.check_source_dirty(repo, ["src/Antigravity.DrawBeams/**"], [])
     assert dirty_p is None
     assert err_code == "SOURCE_STATUS_UNAVAILABLE"
+
 
 
 def test_failed_evidence_validates_schema(tmp_path: Path) -> None:
