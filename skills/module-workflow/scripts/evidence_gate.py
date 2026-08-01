@@ -133,10 +133,11 @@ def search_symbol_literal(
                 for idx, line in enumerate(lines, start=1):
                     if norm_symbol in line:
                         matches.append(f"{norm_p}:{idx}")
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             continue
 
     return matches
+
 
 
 def check_source_dirty(repo_root: Path, mod_norm: str) -> Optional[str]:

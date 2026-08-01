@@ -18,7 +18,8 @@
     "plan_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "plan_lock_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "source_snapshot_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "generated_at": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}" },
+
     "ready_to_implement": { "type": "boolean" },
     "files_verified": {
       "type": "array",

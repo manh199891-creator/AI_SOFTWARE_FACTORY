@@ -1281,11 +1281,33 @@ def test_verify_rejects_lock_negative_amendment_count(tmp_path: Path) -> None:
 
 def test_plan_lock_rejects_module_symlink_escape(tmp_path: Path) -> None:
     repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
-    res = run_plan_lock(repo, "verify", "--module-root", "src/Antigravity.DrawBeams/../../outside")
+    outside_dir = tmp_path / "outside_mod"
+    outside_dir.mkdir()
+    link_dir = repo / "src" / "symlink_mod"
+    try:
+        os.symlink(outside_dir, link_dir)
+    except OSError:
+        pytest.skip("Symlink creation unavailable")
+
+    res = run_plan_lock(repo, "verify", "--module-root", "src/symlink_mod")
     assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "INVALID_MODULE_ROOT"
 
 
 def test_plan_lock_rejects_approval_symlink_escape(tmp_path: Path) -> None:
     repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
-    res = run_plan_lock(repo, "create", "--approval-file", "src/Antigravity.DrawBeams/.ai-workflow/history/../../outside_approval.json")
+    outside_app = tmp_path / "outside_approval.json"
+    outside_app.write_text("{}", encoding="utf-8")
+
+    link_path = mod_dir / ".ai-workflow" / "history" / "symlink_approval.json"
+    try:
+        os.symlink(outside_app, link_path)
+    except OSError:
+        pytest.skip("Symlink creation unavailable")
+
+    rel_link = "src/Antigravity.DrawBeams/.ai-workflow/history/symlink_approval.json"
+    res = run_plan_lock(repo, "create", "--approval-file", rel_link)
     assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "PLAN_REVIEW_PATH_INVALID"

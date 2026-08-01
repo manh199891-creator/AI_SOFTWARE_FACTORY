@@ -931,6 +931,223 @@ def test_evidence_rejects_source_symlink_escape(tmp_path: Path) -> None:
     req_p = mod_dir / ".sandbox" / "evidence_request.json"
     r_data = json.loads(req_p.read_text(encoding="utf-8"))
     r_data["files_to_verify"] = ["src/Antigravity.DrawBeams/../../outside.cs"]
+    r_data["symbols_to_verify"] = ["CreateBeamCommand"]  # should be list of dicts
+    req_p.write_text(json.dumps(r_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_REQUEST_INVALID"
+
+
+def test_collect_rejects_request_extra_property(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    req_p = mod_dir / ".sandbox" / "evidence_request.json"
+    r_data = json.loads(req_p.read_text(encoding="utf-8"))
+    r_data["extra_unexpected_field"] = "hacked"
+    req_p.write_text(json.dumps(r_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_REQUEST_INVALID"
+
+
+def test_collect_invalid_request_returns_json_without_traceback(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    req_p = mod_dir / ".sandbox" / "evidence_request.json"
+    req_p.write_text("{ broken json }", encoding="utf-8")
+
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 2
+    assert "Traceback" not in res.stderr
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_REQUEST_INVALID"
+
+
+def test_invalid_request_does_not_create_evidence(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    req_p = mod_dir / ".sandbox" / "evidence_request.json"
+    req_p.write_text("{ broken json }", encoding="utf-8")
+
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    assert not ev_p.exists()
+
+
+def test_verify_rejects_evidence_missing_files_verified(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    del ev_data["files_verified"]
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_verify_rejects_evidence_empty_files_verified(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["files_verified"] = []
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_verify_rejects_evidence_empty_diagnosis_sources(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["diagnosis_sources"] = []
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_verify_rejects_evidence_missing_hash_field(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    del ev_data["source_snapshot_sha256"]
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_verify_rejects_evidence_extra_property(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["unexpected_extra"] = "hacked"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_verify_rejects_evidence_task_hash_mismatch(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["task_sha256"] = "a" * 64
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_STALE"
+
+
+def test_verify_rejects_evidence_scope_hash_mismatch(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["scope_sha256"] = "b" * 64
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_STALE"
+
+
+def test_verify_rejects_evidence_plan_hash_mismatch(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["plan_sha256"] = "c" * 64
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_STALE"
+
+
+def test_verify_rejects_evidence_module_mismatch(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["module_id"] = "wrong-module"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_STALE"
+
+
+def test_verify_rejects_evidence_base_commit_mismatch(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["base_commit"] = "0" * 40
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_STALE"
+
+
+def test_evidence_rejects_request_symlink_escape(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    outside_req = tmp_path / "outside_request.json"
+    outside_req.write_text("{}", encoding="utf-8")
+
+    link_req = mod_dir / ".sandbox" / "symlink_request.json"
+    try:
+        os.symlink(outside_req, link_req)
+    except OSError:
+        pytest.skip("Symlink creation unavailable")
+
+    rel_link = "src/Antigravity.DrawBeams/.sandbox/symlink_request.json"
+    res = run_evidence_gate(repo, "collect", "--request-file", rel_link)
+    assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_REQUEST_PATH_INVALID"
+    assert not (mod_dir / ".ai-workflow" / "EVIDENCE.json").exists()
+
+
+def test_evidence_rejects_required_source_symlink_escape(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    outside_src = tmp_path / "outside_source.cs"
+    outside_src.write_text("// outside\n", encoding="utf-8")
+
+    link_src = mod_dir / "EscapeRequired.cs"
+    try:
+        os.symlink(outside_src, link_src)
+    except OSError:
+        pytest.skip("Symlink creation unavailable")
+
+    req_p = mod_dir / ".sandbox" / "evidence_request.json"
+    r_data = json.loads(req_p.read_text(encoding="utf-8"))
+    r_data["files_to_verify"].append("src/Antigravity.DrawBeams/EscapeRequired.cs")
     req_p.write_text(json.dumps(r_data), encoding="utf-8")
 
     res = run_evidence_gate(repo, "collect")
@@ -940,13 +1157,77 @@ def test_evidence_rejects_source_symlink_escape(tmp_path: Path) -> None:
     assert not (mod_dir / ".ai-workflow" / "EVIDENCE.json").exists()
 
 
-def test_snapshot_does_not_follow_symlink_outside_repository(tmp_path: Path) -> None:
+def test_evidence_rejects_diagnosis_source_symlink_escape(tmp_path: Path) -> None:
     repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
-    sys.path.insert(0, str(REPO_ROOT / "skills" / "module-workflow" / "scripts"))
-    from module_contract_utils import compute_scope_snapshot
-    snap = compute_scope_snapshot(repo, "src/Antigravity.DrawBeams", ["src/Antigravity.DrawBeams/**"], [])
-    assert isinstance(snap, str)
-    assert len(snap) == 64
+    outside_ds = tmp_path / "outside_diag.cs"
+    outside_ds.write_text("// line 1\n// line 2\n", encoding="utf-8")
+
+    link_ds = mod_dir / "EscapeDiag.cs"
+    try:
+        os.symlink(outside_ds, link_ds)
+    except OSError:
+        pytest.skip("Symlink creation unavailable")
+
+    subprocess.run(["git", "add", "src/Antigravity.DrawBeams/EscapeDiag.cs"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "add diag symlink"], cwd=repo, check=True, capture_output=True)
+
+    req_p = mod_dir / ".sandbox" / "evidence_request.json"
+    r_data = json.loads(req_p.read_text(encoding="utf-8"))
+    r_data["diagnosis_sources"].append({
+        "path": "src/Antigravity.DrawBeams/EscapeDiag.cs",
+        "line_start": 1,
+        "line_end": 2,
+        "reason": "escaped symlink test"
+    })
+    req_p.write_text(json.dumps(r_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "collect")
+    out = json.loads(res.stdout)
+    assert out["ready_to_implement"] is False
+    assert any("Diagnosis source containment violation" in f for f in out["failures"])
+
+
+def test_evidence_rejects_symbol_search_symlink_escape(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    outside_sym = tmp_path / "outside_symbol.cs"
+    outside_sym.write_text("// CreateBeamCommand\n", encoding="utf-8")
+
+    link_sym = mod_dir / "EscapeSymbol.cs"
+    try:
+        os.symlink(outside_sym, link_sym)
+    except OSError:
+        pytest.skip("Symlink creation unavailable")
+
+    subprocess.run(["git", "add", "src/Antigravity.DrawBeams/EscapeSymbol.cs"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "add symlink for symbol search"], cwd=repo, check=True, capture_output=True)
+
+    from module_contract_utils import search_symbol_literal, PathContainmentError, list_tracked_files
+
+    tracked = list_tracked_files(repo)
+    with pytest.raises(PathContainmentError):
+        search_symbol_literal(repo, tracked, "CreateBeamCommand", None, ["src/Antigravity.DrawBeams/**"], [])
+
+
+def test_real_symlink_snapshot_escape(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    outside_dir = tmp_path / "outside_dir"
+    outside_dir.mkdir()
+    outside_file = outside_dir / "secret.txt"
+    outside_file.write_text("secret", encoding="utf-8")
+
+    link_path = mod_dir / "symlink_outside.txt"
+    try:
+        os.symlink(outside_file, link_path)
+    except OSError:
+        pytest.skip("Symlink creation unavailable")
+
+    from module_contract_utils import compute_scope_snapshot, PathContainmentError
+
+    subprocess.run(["git", "add", str(link_path)], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "add symlink for snapshot"], cwd=repo, check=True, capture_output=True)
+
+    with pytest.raises(PathContainmentError):
+        compute_scope_snapshot(repo, "src/Antigravity.DrawBeams", ["src/Antigravity.DrawBeams/**"], [])
 
 
 def test_git_status_porcelain_z_rename_source_outside_module(tmp_path: Path) -> None:
@@ -971,31 +1252,9 @@ def test_git_status_porcelain_z_filename_with_spaces_and_special_chars(tmp_path:
     repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
     space_file = mod_dir / "file with spaces #1.txt"
     space_file.write_text("content with space", encoding="utf-8")
-    # Dirty file before evidence collect
+
     res = run_evidence_gate(repo, "collect")
     assert res.returncode == 2
     out = json.loads(res.stdout)
     assert out["reason_code"] == "SOURCE_CHANGED_BEFORE_EVIDENCE"
     assert not (mod_dir / ".ai-workflow" / "EVIDENCE.json").exists()
-
-
-def test_real_symlink_containment_failure(tmp_path: Path) -> None:
-    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
-    outside_dir = tmp_path / "outside_dir"
-    outside_dir.mkdir()
-    outside_file = outside_dir / "secret.txt"
-    outside_file.write_text("secret", encoding="utf-8")
-
-    link_path = mod_dir / "symlink_outside.txt"
-    try:
-        os.symlink(outside_file, link_path)
-    except (OSError, NotImplementedError):
-        pytest.skip("Symlink creation not permitted on this platform/user level")
-
-    sys.path.insert(0, str(REPO_ROOT / "skills" / "module-workflow" / "scripts"))
-    from module_contract_utils import compute_scope_snapshot, PathContainmentError
-
-    subprocess.run(["git", "add", str(link_path)], cwd=repo, check=True, capture_output=True)
-
-    with pytest.raises(PathContainmentError):
-        compute_scope_snapshot(repo, "src/Antigravity.DrawBeams", ["src/Antigravity.DrawBeams/**"], [])
