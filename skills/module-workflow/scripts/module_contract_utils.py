@@ -590,12 +590,13 @@ def validate_evidence_contract(payload: Any) -> None:
 
     allowed_keys = {
         "schema_version", "action", "status", "reason_code", "repository_root",
-        "module_root", "branch", "task_id", "base_commit", "task_sha256",
+        "module_root", "branch", "task_id", "module_id", "base_commit", "task_sha256",
         "scope_sha256", "plan_sha256", "plan_lock_sha256", "source_snapshot_sha256",
         "generated_at", "ready_to_implement", "files_checked", "symbols_checked",
         "diagnosis_sources_checked", "files_verified", "symbols_verified",
         "diagnosis", "diagnosis_sources", "failures", "dry_run", "files_created"
     }
+
     extra_keys = set(payload.keys()) - allowed_keys
     if extra_keys:
         raise ContractValidationError(f"Evidence payload has unexpected properties: {sorted(extra_keys)}")

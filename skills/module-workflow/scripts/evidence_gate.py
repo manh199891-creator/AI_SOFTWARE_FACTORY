@@ -385,7 +385,9 @@ def evidence_collect(
         "module_root": mod_norm,
         "branch": branch,
         "task_id": task_id,
+        "module_id": module_json.get("module_id", ""),
         "base_commit": scope_data.get("base_commit", ""),
+
         "task_sha256": lock_data.get("task_sha256", ""),
         "scope_sha256": lock_data.get("scope_sha256", ""),
         "plan_sha256": lock_data.get("plan_sha256", ""),
@@ -425,10 +427,13 @@ def evidence_collect(
             if old_ready:
                 cmp_old = dict(old_evidence)
                 cmp_old.pop("generated_at", None)
+                cmp_old.pop("files_created", None)
                 cmp_new = dict(evidence_payload)
                 cmp_new.pop("generated_at", None)
+                cmp_new.pop("files_created", None)
 
                 if cmp_old == cmp_new:
+
                     res = make_result(
                         action,
                         "NO_CHANGES",
