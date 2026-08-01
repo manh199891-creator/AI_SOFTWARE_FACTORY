@@ -52,6 +52,16 @@ MODULE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 TASK_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 
+def parse_iso_datetime(dt_str: str) -> datetime.datetime:
+    if not isinstance(dt_str, str) or not ISO_8601_RE.match(dt_str):
+        raise ContractValidationError(f"Invalid ISO-8601 datetime format: {dt_str!r}")
+    try:
+        norm_str = dt_str.replace("Z", "+00:00")
+        return datetime.datetime.fromisoformat(norm_str)
+    except ValueError as e:
+        raise ContractValidationError(f"Invalid ISO-8601 datetime value: {dt_str!r} ({e})")
+
+
 # ---------------------------------------------------------------------------
 # Atomic IO & JSON
 # ---------------------------------------------------------------------------
@@ -174,7 +184,6 @@ def resolve_contained_path(
     must_exist: bool = False,
     containment_root: Path | None = None,
 ) -> Path:
-
     if not relative_path or not isinstance(relative_path, str):
         raise PathContainmentError(f"Invalid relative path string: {relative_path!r}")
 
@@ -188,9 +197,7 @@ def resolve_contained_path(
     if must_exist and not target.exists():
         raise PathContainmentError(f"Path does not exist: {relative_path!r} ({target})")
 
-    # Check symlinks for target (or its parent if not existing yet)
     if target.exists() or target.is_symlink():
-        # Check if symlink points outside repo_root
         if target.is_symlink():
             real_target = os.readlink(target)
             resolved_link = (target.parent / real_target).resolve()
@@ -227,7 +234,6 @@ def path_matches_pattern(rel_path: str, glob_pattern: str) -> bool:
     norm_path = normalize_rel_path(rel_path)
     norm_pattern = normalize_rel_path(glob_pattern)
 
-    # Convert glob pattern with **, *, ? to regular expression
     res = "^"
     i = 0
     n = len(norm_pattern)
@@ -258,12 +264,10 @@ def path_matches_pattern(rel_path: str, glob_pattern: str) -> bool:
 def is_path_allowed(rel_path: str, allowed_paths: List[str], forbidden_paths: List[str]) -> bool:
     norm_path = normalize_rel_path(rel_path)
 
-    # Check forbidden first
     for f_pat in forbidden_paths:
         if path_matches_pattern(norm_path, f_pat):
             return False
 
-    # Check allowed
     for a_pat in allowed_paths:
         if path_matches_pattern(norm_path, a_pat):
             return True
@@ -367,6 +371,7 @@ def compute_scope_snapshot(
     snapshot_items: List[Tuple[str, str]] = []
 
     module_norm = normalize_rel_path(module_root_rel)
+    repo_abs = repo_root.resolve()
 
     for rel_path in all_tracked:
         norm_path = normalize_rel_path(rel_path)
@@ -380,15 +385,19 @@ def compute_scope_snapshot(
 
         if is_path_allowed(norm_path, allowed_paths, forbidden_paths):
             full_path = repo_root / norm_path
-            # Check symlink escape
             if full_path.is_symlink():
                 real_target = os.readlink(full_path)
                 resolved_link = (full_path.parent / real_target).resolve()
                 try:
-                    resolved_link.relative_to(repo_root.resolve())
+                    resolved_link.relative_to(repo_abs)
                 except ValueError:
-                    # Symlink points outside repository — skip or reject
-                    continue
+                    raise PathContainmentError(f"Symlink in scope snapshot escapes repository: {norm_path!r} -> {resolved_link}")
+            else:
+                try:
+                    full_path.resolve().relative_to(repo_abs)
+                except ValueError:
+                    raise PathContainmentError(f"File in scope snapshot escapes repository: {norm_path!r}")
+
             if full_path.exists() and full_path.is_file():
                 f_sha = sha256_file(full_path)
                 snapshot_items.append((norm_path, f_sha))
@@ -408,6 +417,134 @@ def compute_scope_snapshot(
 # ---------------------------------------------------------------------------
 # Contract Runtime Validators (Pure Python)
 # ---------------------------------------------------------------------------
+
+def validate_module_contract(payload: Any) -> None:
+    if not isinstance(payload, dict):
+        raise ContractValidationError("MODULE payload must be a JSON object.")
+
+    allowed_keys = {
+        "schema_version", "module_id", "module_name", "module_root", "project_file",
+        "platform", "workflow_root", "sandbox_root", "sandbox_dll",
+        "stable_output_root", "default_test_paths", "shared_dependencies", "workflow_version"
+    }
+    extra_keys = set(payload.keys()) - allowed_keys
+    if extra_keys:
+        raise ContractValidationError(f"MODULE payload has unexpected properties: {sorted(extra_keys)}")
+
+    missing_keys = allowed_keys - set(payload.keys())
+    if missing_keys:
+        raise ContractValidationError(f"MODULE payload missing required property: {sorted(missing_keys)}")
+
+    if payload["schema_version"] != 1 or isinstance(payload["schema_version"], bool):
+        raise ContractValidationError("MODULE schema_version must be integer 1.")
+    if not isinstance(payload["module_id"], str) or not MODULE_ID_RE.match(payload["module_id"]):
+        raise ContractValidationError(f"MODULE module_id invalid: {payload['module_id']!r}")
+    if not isinstance(payload["module_root"], str) or not validate_relative_path(payload["module_root"]):
+        raise ContractValidationError(f"MODULE module_root invalid: {payload['module_root']!r}")
+    if not isinstance(payload["module_name"], str) or not payload["module_name"].strip():
+        raise ContractValidationError("MODULE module_name must be non-empty string.")
+    if not isinstance(payload["project_file"], str) or not validate_relative_path(payload["project_file"]):
+        raise ContractValidationError(f"MODULE project_file invalid: {payload['project_file']!r}")
+    if payload["platform"] not in ("revit", "navisworks", "dotnet"):
+        raise ContractValidationError(f"MODULE platform invalid: {payload['platform']!r}")
+    if not isinstance(payload["workflow_root"], str) or not validate_relative_path(payload["workflow_root"]):
+        raise ContractValidationError(f"MODULE workflow_root invalid: {payload['workflow_root']!r}")
+    if not isinstance(payload["sandbox_root"], str) or not validate_relative_path(payload["sandbox_root"]):
+        raise ContractValidationError(f"MODULE sandbox_root invalid: {payload['sandbox_root']!r}")
+    if not isinstance(payload["sandbox_dll"], str) or not validate_relative_path(payload["sandbox_dll"]):
+        raise ContractValidationError(f"MODULE sandbox_dll invalid: {payload['sandbox_dll']!r}")
+    if not isinstance(payload["stable_output_root"], str) or not validate_relative_path(payload["stable_output_root"]):
+        raise ContractValidationError(f"MODULE stable_output_root invalid: {payload['stable_output_root']!r}")
+    if not isinstance(payload["default_test_paths"], list):
+        raise ContractValidationError("MODULE default_test_paths must be an array.")
+    for p in payload["default_test_paths"]:
+        if not isinstance(p, str) or not validate_relative_path(p):
+            raise ContractValidationError(f"MODULE default_test_paths item invalid: {p!r}")
+    if not isinstance(payload["shared_dependencies"], list):
+        raise ContractValidationError("MODULE shared_dependencies must be an array.")
+    for p in payload["shared_dependencies"]:
+        if not isinstance(p, str) or not validate_relative_path(p):
+            raise ContractValidationError(f"MODULE shared_dependencies item invalid: {p!r}")
+    if not isinstance(payload["workflow_version"], str) or not re.match(r"^[0-9]+\.[0-9]+\.[0-9]+$", payload["workflow_version"]):
+        raise ContractValidationError(f"MODULE workflow_version invalid: {payload['workflow_version']!r}")
+
+
+def validate_scope_contract(payload: Any) -> None:
+    if not isinstance(payload, dict):
+        raise ContractValidationError("SCOPE payload must be a JSON object.")
+
+    allowed_keys = {
+        "schema_version", "task_id", "module_id", "base_branch", "work_branch",
+        "base_commit", "allowed_paths", "forbidden_paths", "required_files",
+        "required_symbols", "max_files_changed", "max_changed_lines",
+        "test_commands", "sandbox_build", "direct_main_changes", "auto_merge", "status"
+    }
+    extra_keys = set(payload.keys()) - allowed_keys
+    if extra_keys:
+        raise ContractValidationError(f"SCOPE payload has unexpected properties: {sorted(extra_keys)}")
+
+    missing_keys = allowed_keys - set(payload.keys())
+    if missing_keys:
+        raise ContractValidationError(f"SCOPE payload missing required property: {sorted(missing_keys)}")
+
+    if payload["schema_version"] != 1 or isinstance(payload["schema_version"], bool):
+        raise ContractValidationError("SCOPE schema_version must be integer 1.")
+    if not isinstance(payload["task_id"], str) or not TASK_ID_RE.match(payload["task_id"]):
+        raise ContractValidationError(f"SCOPE task_id invalid: {payload['task_id']!r}")
+    if not isinstance(payload["module_id"], str) or not MODULE_ID_RE.match(payload["module_id"]):
+        raise ContractValidationError(f"SCOPE module_id invalid: {payload['module_id']!r}")
+    if not isinstance(payload["base_branch"], str) or not payload["base_branch"].strip():
+        raise ContractValidationError("SCOPE base_branch must be non-empty string.")
+    if not isinstance(payload["work_branch"], str) or not payload["work_branch"].strip() or payload["work_branch"] in PROTECTED_BRANCHES:
+        raise ContractValidationError(f"SCOPE work_branch invalid or protected: {payload['work_branch']!r}")
+    if not isinstance(payload["base_commit"], str) or not re.match(r"^[a-f0-9]{40}([a-f0-9]{24})?$", payload["base_commit"]):
+        raise ContractValidationError(f"SCOPE base_commit invalid: {payload['base_commit']!r}")
+
+    if not isinstance(payload["allowed_paths"], list) or len(payload["allowed_paths"]) < 1:
+        raise ContractValidationError("SCOPE allowed_paths must be a non-empty array.")
+    for p in payload["allowed_paths"]:
+        if not isinstance(p, str) or not validate_relative_path(p):
+            raise ContractValidationError(f"SCOPE allowed_paths item invalid relative path: {p!r}")
+
+    if not isinstance(payload["forbidden_paths"], list):
+        raise ContractValidationError("SCOPE forbidden_paths must be an array.")
+    for p in payload["forbidden_paths"]:
+        if not isinstance(p, str) or not validate_relative_path(p):
+            raise ContractValidationError(f"SCOPE forbidden_paths item invalid relative path: {p!r}")
+
+    if not isinstance(payload["required_files"], list):
+        raise ContractValidationError("SCOPE required_files must be an array.")
+    for p in payload["required_files"]:
+        if not isinstance(p, str) or not validate_relative_path(p):
+            raise ContractValidationError(f"SCOPE required_files item invalid relative path: {p!r}")
+
+    if not isinstance(payload["required_symbols"], list):
+        raise ContractValidationError("SCOPE required_symbols must be an array.")
+    for s in payload["required_symbols"]:
+        if not isinstance(s, str):
+            raise ContractValidationError(f"SCOPE required_symbols item invalid string: {s!r}")
+
+    if not isinstance(payload["max_files_changed"], int) or isinstance(payload["max_files_changed"], bool) or payload["max_files_changed"] < 1:
+        raise ContractValidationError("SCOPE max_files_changed must be integer >= 1.")
+    if not isinstance(payload["max_changed_lines"], int) or isinstance(payload["max_changed_lines"], bool) or payload["max_changed_lines"] < 1:
+        raise ContractValidationError("SCOPE max_changed_lines must be integer >= 1.")
+
+    if not isinstance(payload["test_commands"], list):
+        raise ContractValidationError("SCOPE test_commands must be an array.")
+    for c in payload["test_commands"]:
+        if not isinstance(c, str) or not c.strip():
+            raise ContractValidationError("SCOPE test_commands item must be non-empty string.")
+
+    if not isinstance(payload["sandbox_build"], bool):
+        raise ContractValidationError("SCOPE sandbox_build must be boolean.")
+    if payload["direct_main_changes"] is not False:
+        raise ContractValidationError("SCOPE direct_main_changes must be false.")
+    if payload["auto_merge"] is not False:
+        raise ContractValidationError("SCOPE auto_merge must be false.")
+
+    if payload["status"] not in ("DRAFT", "READY", "LOCKED", "AMENDMENT_REQUIRED"):
+        raise ContractValidationError(f"SCOPE status invalid: {payload['status']!r}")
+
 
 def validate_plan_review_contract(payload: Any) -> None:
     if not isinstance(payload, dict):
@@ -450,10 +587,14 @@ def validate_plan_review_contract(payload: Any) -> None:
         raise ContractValidationError(f"Plan review scope_sha256 must be a 64-character lowercase hex SHA: {payload['scope_sha256']!r}")
     if not isinstance(payload["plan_sha256"], str) or not SHA256_LOWER_RE.match(payload["plan_sha256"]):
         raise ContractValidationError(f"Plan review plan_sha256 must be a 64-character lowercase hex SHA: {payload['plan_sha256']!r}")
-    if not isinstance(payload["reviewed_at"], str) or not ISO_8601_RE.match(payload["reviewed_at"]):
-        raise ContractValidationError(f"Plan review reviewed_at must be valid ISO-8601 UTC date-time string: {payload['reviewed_at']!r}")
+
+    parse_iso_datetime(payload["reviewed_at"])
+
     if not isinstance(payload["findings"], list):
         raise ContractValidationError("Plan review findings must be an array.")
+    for item in payload["findings"]:
+        if not isinstance(item, dict):
+            raise ContractValidationError("Plan review findings item must be an object.")
 
 
 def validate_plan_lock_contract(payload: Any) -> None:
@@ -463,9 +604,8 @@ def validate_plan_lock_contract(payload: Any) -> None:
     allowed_keys = {
         "schema_version", "module_id", "branch", "task_id", "base_commit",
         "task_sha256", "scope_sha256", "plan_sha256", "approval_file",
-        "approval_sha256", "approval_commit", "locked_by", "locked_at",
-        "plan_status", "approved_by", "approved_review_run", "approved_at",
-        "amendment_count"
+        "approval_sha256", "plan_status", "approved_by", "approved_review_run",
+        "approved_at", "amendment_count"
     }
     extra_keys = set(payload.keys()) - allowed_keys
     if extra_keys:
@@ -495,20 +635,15 @@ def validate_plan_lock_contract(payload: Any) -> None:
         raise ContractValidationError(f"Plan lock approval_file must be a valid relative path string: {payload['approval_file']!r}")
     if not isinstance(payload["approval_sha256"], str) or not SHA256_LOWER_RE.match(payload["approval_sha256"]):
         raise ContractValidationError(f"Plan lock approval_sha256 must be a 64-character lowercase hex SHA: {payload['approval_sha256']!r}")
-    if not isinstance(payload["approval_commit"], str) or not GIT_SHA_LOWER_RE.match(payload["approval_commit"]):
-        raise ContractValidationError(f"Plan lock approval_commit must be a 40-character lowercase hex SHA: {payload['approval_commit']!r}")
-    if payload["locked_by"] != "codex":
-        raise ContractValidationError("Plan lock locked_by must be 'codex'.")
-    if not isinstance(payload["locked_at"], str) or not ISO_8601_RE.match(payload["locked_at"]):
-        raise ContractValidationError(f"Plan lock locked_at must be valid ISO-8601 UTC date-time string: {payload['locked_at']!r}")
     if payload["plan_status"] != "APPROVED":
         raise ContractValidationError(f"Plan lock plan_status must be 'APPROVED': {payload['plan_status']!r}")
     if payload["approved_by"] != "codex":
         raise ContractValidationError(f"Plan lock approved_by must be 'codex': {payload['approved_by']!r}")
     if not isinstance(payload["approved_review_run"], str) or not payload["approved_review_run"].strip():
         raise ContractValidationError("Plan lock approved_review_run must be a non-empty string.")
-    if not isinstance(payload["approved_at"], str) or not ISO_8601_RE.match(payload["approved_at"]):
-        raise ContractValidationError(f"Plan lock approved_at must be valid ISO-8601 UTC date-time string: {payload['approved_at']!r}")
+
+    parse_iso_datetime(payload["approved_at"])
+
     if not isinstance(payload["amendment_count"], int) or isinstance(payload["amendment_count"], bool) or payload["amendment_count"] < 0:
         raise ContractValidationError("Plan lock amendment_count must be an integer >= 0.")
 
@@ -551,11 +686,16 @@ def validate_evidence_request_contract(payload: Any) -> None:
         item_extra = set(item.keys()) - item_allowed
         if item_extra:
             raise ContractValidationError(f"symbols_to_verify item has unexpected properties: {sorted(item_extra)}")
-        if "symbol" not in item or not isinstance(item["symbol"], str) or not item["symbol"].strip():
+        item_missing = item_allowed - set(item.keys())
+        if item_missing:
+            raise ContractValidationError(f"symbols_to_verify item missing required property: {sorted(item_missing)}")
+        if not isinstance(item["symbol"], str) or not item["symbol"].strip():
             raise ContractValidationError("symbols_to_verify item symbol must be non-empty string.")
-        if "paths" in item:
-            if not isinstance(item["paths"], list):
-                raise ContractValidationError("symbols_to_verify item paths must be an array.")
+        if not isinstance(item["paths"], list) or len(item["paths"]) < 1:
+            raise ContractValidationError("symbols_to_verify item paths must be an array with at least 1 relative path.")
+        for p in item["paths"]:
+            if not isinstance(p, str) or not validate_relative_path(p):
+                raise ContractValidationError(f"symbols_to_verify item path invalid relative path: {p!r}")
 
     if not isinstance(payload["diagnosis"], str) or len(payload["diagnosis"]) < 20:
         raise ContractValidationError("diagnosis must be a string with at least 20 characters.")
@@ -589,52 +729,36 @@ def validate_evidence_contract(payload: Any) -> None:
         raise ContractValidationError("Evidence payload must be a JSON object.")
 
     allowed_keys = {
-        "schema_version", "action", "status", "reason_code", "repository_root",
-        "module_root", "branch", "task_id", "module_id", "base_commit", "task_sha256",
-        "scope_sha256", "plan_sha256", "plan_lock_sha256", "source_snapshot_sha256",
-        "generated_at", "ready_to_implement", "files_checked", "symbols_checked",
-        "diagnosis_sources_checked", "files_verified", "symbols_verified",
-        "diagnosis", "diagnosis_sources", "failures", "dry_run", "files_created"
+        "schema_version", "repository_root", "branch", "task_id", "module_id",
+        "base_commit", "task_sha256", "scope_sha256", "plan_sha256",
+        "plan_lock_sha256", "source_snapshot_sha256", "generated_at",
+        "ready_to_implement", "files_verified", "symbols_verified",
+        "diagnosis", "diagnosis_sources"
     }
 
     extra_keys = set(payload.keys()) - allowed_keys
     if extra_keys:
         raise ContractValidationError(f"Evidence payload has unexpected properties: {sorted(extra_keys)}")
 
-    required_keys = allowed_keys - {"generated_at"}
-    missing_keys = required_keys - set(payload.keys())
+    missing_keys = allowed_keys - set(payload.keys())
     if missing_keys:
         raise ContractValidationError(f"Evidence payload missing required property: {sorted(missing_keys)}")
 
-
     if payload["schema_version"] != 1 or isinstance(payload["schema_version"], bool):
         raise ContractValidationError("Evidence schema_version must be integer 1.")
-    if payload["action"] not in ("collect", "verify"):
-        raise ContractValidationError(f"Evidence action invalid: {payload['action']!r}")
-    if payload["status"] not in ("READY_FOR_IMPLEMENTATION", "INSUFFICIENT_EVIDENCE", "FAILED", "NO_CHANGES", "DRY_RUN"):
-        raise ContractValidationError(f"Evidence status invalid: {payload['status']!r}")
-    if not isinstance(payload["reason_code"], str) or not payload["reason_code"].strip():
-        raise ContractValidationError("Evidence reason_code must be non-empty string.")
-    if not isinstance(payload["repository_root"], str) or not payload["repository_root"].strip():
-        raise ContractValidationError("Evidence repository_root must be non-empty string.")
-    if not isinstance(payload["module_root"], str) or not payload["module_root"].strip():
-        raise ContractValidationError("Evidence module_root must be non-empty string.")
+    if payload["repository_root"] != ".":
+        raise ContractValidationError(f"Evidence repository_root must be '.': {payload['repository_root']!r}")
     if not isinstance(payload["branch"], str) or not payload["branch"].strip():
         raise ContractValidationError("Evidence branch must be non-empty string.")
     if not isinstance(payload["task_id"], str) or not TASK_ID_RE.match(payload["task_id"]):
         raise ContractValidationError(f"Evidence task_id invalid: {payload['task_id']!r}")
+    if not isinstance(payload["module_id"], str) or not MODULE_ID_RE.match(payload["module_id"]):
+        raise ContractValidationError(f"Evidence module_id invalid: {payload['module_id']!r}")
+
+    parse_iso_datetime(payload["generated_at"])
 
     if not isinstance(payload["ready_to_implement"], bool):
         raise ContractValidationError("Evidence ready_to_implement must be boolean.")
-    if not isinstance(payload["dry_run"], bool):
-        raise ContractValidationError("Evidence dry_run must be boolean.")
-
-    if not isinstance(payload["files_checked"], int) or isinstance(payload["files_checked"], bool) or payload["files_checked"] < 0:
-        raise ContractValidationError("Evidence files_checked must be integer >= 0.")
-    if not isinstance(payload["symbols_checked"], int) or isinstance(payload["symbols_checked"], bool) or payload["symbols_checked"] < 0:
-        raise ContractValidationError("Evidence symbols_checked must be integer >= 0.")
-    if not isinstance(payload["diagnosis_sources_checked"], int) or isinstance(payload["diagnosis_sources_checked"], bool) or payload["diagnosis_sources_checked"] < 0:
-        raise ContractValidationError("Evidence diagnosis_sources_checked must be integer >= 0.")
 
     if not isinstance(payload["files_verified"], list):
         raise ContractValidationError("Evidence files_verified must be an array.")
@@ -642,12 +766,9 @@ def validate_evidence_contract(payload: Any) -> None:
         raise ContractValidationError("Evidence symbols_verified must be an array.")
     if not isinstance(payload["diagnosis_sources"], list):
         raise ContractValidationError("Evidence diagnosis_sources must be an array.")
-    if not isinstance(payload["failures"], list):
-        raise ContractValidationError("Evidence failures must be an array.")
-    if not isinstance(payload["files_created"], list):
-        raise ContractValidationError("Evidence files_created must be an array.")
+    if not isinstance(payload["diagnosis"], str):
+        raise ContractValidationError("Evidence diagnosis must be a string.")
 
-    # Rules when ready_to_implement == True
     if payload["ready_to_implement"]:
         if not isinstance(payload["base_commit"], str) or not GIT_SHA_LOWER_RE.match(payload["base_commit"]):
             raise ContractValidationError(f"Evidence base_commit invalid when ready: {payload['base_commit']!r}")
@@ -665,21 +786,36 @@ def validate_evidence_contract(payload: Any) -> None:
             if not isinstance(item, dict):
                 raise ContractValidationError("files_verified item must be object.")
             allowed_f = {"path", "exists", "tracked", "file_sha256", "evidence_command"}
+            missing_f = allowed_f - set(item.keys())
+            if missing_f:
+                raise ContractValidationError(f"files_verified item missing required property: {sorted(missing_f)}")
             if set(item.keys()) - allowed_f:
                 raise ContractValidationError(f"files_verified item has unexpected properties: {sorted(set(item.keys()) - allowed_f)}")
+            if not isinstance(item.get("path"), str) or not validate_relative_path(item.get("path")):
+                raise ContractValidationError(f"files_verified item path invalid relative path: {item.get('path')!r}")
             if item.get("exists") is not True:
                 raise ContractValidationError(f"files_verified item exists must be true: {item}")
             if item.get("tracked") is not True:
                 raise ContractValidationError(f"files_verified item tracked must be true: {item}")
             if not isinstance(item.get("file_sha256"), str) or not SHA256_LOWER_RE.match(item.get("file_sha256", "")):
                 raise ContractValidationError(f"files_verified item file_sha256 invalid: {item}")
+            if not isinstance(item.get("evidence_command"), str) or not item.get("evidence_command").strip():
+                raise ContractValidationError(f"files_verified item evidence_command invalid: {item}")
 
         for item in payload["symbols_verified"]:
             if not isinstance(item, dict):
                 raise ContractValidationError("symbols_verified item must be object.")
-            allowed_s = {"symbol", "matches", "found_count", "evidence_command"}
+            allowed_s = {"symbol", "evidence_command", "matches", "found_count"}
+            missing_s = allowed_s - set(item.keys())
+            if missing_s:
+                raise ContractValidationError(f"symbols_verified item missing required property: {sorted(missing_s)}")
             if set(item.keys()) - allowed_s:
                 raise ContractValidationError(f"symbols_verified item has unexpected properties: {sorted(set(item.keys()) - allowed_s)}")
+            if not isinstance(item.get("evidence_command"), str) or not item.get("evidence_command").strip():
+                raise ContractValidationError(f"symbols_verified item evidence_command invalid: {item}")
+            matches = item.get("matches")
+            if not isinstance(matches, list) or len(matches) < 1:
+                raise ContractValidationError(f"symbols_verified item matches must contain at least 1 match: {item}")
             fc = item.get("found_count")
             if not isinstance(fc, int) or isinstance(fc, bool) or fc < 1:
                 raise ContractValidationError(f"symbols_verified item found_count must be integer >= 1 when ready: {item}")
@@ -688,6 +824,9 @@ def validate_evidence_contract(payload: Any) -> None:
             if not isinstance(item, dict):
                 raise ContractValidationError("diagnosis_sources item must be object.")
             allowed_d = {"path", "line_start", "line_end", "reason", "file_sha256", "excerpt_sha256"}
+            missing_d = allowed_d - set(item.keys())
+            if missing_d:
+                raise ContractValidationError(f"diagnosis_sources item missing required property: {sorted(missing_d)}")
             if set(item.keys()) - allowed_d:
                 raise ContractValidationError(f"diagnosis_sources item has unexpected properties: {sorted(set(item.keys()) - allowed_d)}")
             f_sha = item.get("file_sha256")
@@ -736,12 +875,20 @@ def verify_plan_lock_context(
     module_json_path = module_abs / ".ai-workflow" / "MODULE.json"
     if not module_json_path.exists():
         raise PlanLockVerificationError("MODULE_CONTRACT_MISSING", "MODULE.json missing", exit_code=2)
-    module_json = load_json(module_json_path)
+    try:
+        module_json = load_json(module_json_path)
+        validate_module_contract(module_json)
+    except Exception as e:
+        raise PlanLockVerificationError("MODULE_CONTRACT_MISMATCH", f"Invalid MODULE.json: {e}", exit_code=2)
 
     scope_json_path = module_abs / ".ai-workflow" / "SCOPE.json"
     if not scope_json_path.exists():
         raise PlanLockVerificationError("SCOPE_CONTRACT_MISSING", "SCOPE.json missing", exit_code=2)
-    scope_json = load_json(scope_json_path)
+    try:
+        scope_json = load_json(scope_json_path)
+        validate_scope_contract(scope_json)
+    except Exception as e:
+        raise PlanLockVerificationError("SCOPE_CONTRACT_MISMATCH", f"Invalid SCOPE.json: {e}", exit_code=2)
 
     task_path = module_abs / ".ai-workflow" / "TASK.md"
     plan_path = module_abs / ".ai-workflow" / "PLAN.md"
@@ -764,7 +911,6 @@ def verify_plan_lock_context(
     except ContractValidationError as e:
         raise PlanLockVerificationError("PLAN_LOCK_INVALID", str(e), exit_code=5)
 
-    # Validate module/scope identity match
     if lock_data["module_id"] != module_json["module_id"]:
         raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Module ID mismatch in PLAN_LOCK.json", exit_code=5)
     if lock_data["task_id"] != scope_json["task_id"]:
@@ -775,7 +921,6 @@ def verify_plan_lock_context(
     if lock_data["base_commit"] != scope_json["base_commit"]:
         raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Base commit mismatch in PLAN_LOCK.json", exit_code=5)
 
-    # Validate task, scope, plan hashes
     curr_task_hash = hash_task_file(task_path)
     curr_scope_hash = hash_scope_file(scope_json_path)
     curr_plan_hash = hash_plan_file(plan_path)

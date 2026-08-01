@@ -35,11 +35,12 @@ from module_contract_utils import (
     run_git,
     sha256_bytes,
     sha256_file,
+    validate_module_contract,
     validate_plan_lock_contract,
-
     validate_plan_review_contract,
     validate_relative_path,
     validate_repository_root,
+    validate_scope_contract,
     verify_plan_lock_context,
 )
 
@@ -170,7 +171,6 @@ def plan_lock_create(
     except PathContainmentError as e:
         fail(2, make_result(action, "FAILED", "PLAN_REVIEW_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm), str(e))
 
-
     branch = get_current_branch(repo_root)
     if not branch or branch in PROTECTED_BRANCHES:
         fail(2, make_result(action, "FAILED", "PROTECTED_BRANCH_BLOCKED", repository_root=repo_root_str, module_root=mod_norm, branch=branch), f"Branch '{branch}' is protected or empty")
@@ -186,8 +186,9 @@ def plan_lock_create(
 
     try:
         module_data = load_json(module_json_path)
-    except Exception:
-        fail(2, make_result(action, "FAILED", "MODULE_CONTRACT_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch), "Invalid MODULE.json")
+        validate_module_contract(module_data)
+    except Exception as e:
+        fail(2, make_result(action, "FAILED", "MODULE_CONTRACT_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch), f"Invalid MODULE.json: {e}")
 
     if module_data.get("module_root") != mod_norm:
         fail(2, make_result(action, "FAILED", "MODULE_CONTRACT_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch), "MODULE.json module_root mismatch")
@@ -201,8 +202,9 @@ def plan_lock_create(
     # Validate Scope
     try:
         scope_data = load_json(scope_json_path)
-    except Exception:
-        fail(2, make_result(action, "FAILED", "SCOPE_NOT_READY", repository_root=repo_root_str, module_root=mod_norm, branch=branch))
+        validate_scope_contract(scope_data)
+    except Exception as e:
+        fail(2, make_result(action, "FAILED", "SCOPE_NOT_READY", repository_root=repo_root_str, module_root=mod_norm, branch=branch), f"Invalid SCOPE.json: {e}")
 
     if scope_data.get("module_id") != module_data.get("module_id"):
         fail(2, make_result(action, "FAILED", "SCOPE_TASK_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch))
@@ -233,7 +235,6 @@ def plan_lock_create(
 
     try:
         approval_data = load_json(approval_full_path)
-
     except Exception as e:
         fail(2, make_result(action, "FAILED", "PLAN_REVIEW_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), f"Invalid JSON: {e}")
 
@@ -257,7 +258,6 @@ def plan_lock_create(
     if approval_data.get("base_commit") != base_commit:
         fail(2, make_result(action, "FAILED", "BASE_COMMIT_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 
-    # Check approval commit is in Git history
     res_log = run_git(["log", "--format=%H"], repo_root)
     if res_log.returncode != 0:
         fail(2, make_result(action, "FAILED", "APPROVAL_NOT_IN_HISTORY", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
@@ -276,7 +276,7 @@ def plan_lock_create(
     approval_file_sha = sha256_file(approval_full_path)
     approval_rel_norm = normalize_rel_path(approval_file_rel)
 
-    # Construct PLAN_LOCK payload
+    # Construct PLAN_LOCK payload (Option A: No approval_commit, locked_at, locked_by)
     lock_payload = {
         "schema_version": 1,
         "module_id": module_data.get("module_id"),
@@ -288,9 +288,6 @@ def plan_lock_create(
         "plan_sha256": curr_plan_sha,
         "approval_file": approval_rel_norm,
         "approval_sha256": approval_file_sha,
-        "approval_commit": base_commit,
-        "locked_by": "codex",
-        "locked_at": approval_data.get("reviewed_at"),
         "plan_status": "APPROVED",
         "approved_by": "codex",
         "approved_review_run": approval_data.get("review_run_id"),

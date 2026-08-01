@@ -118,10 +118,8 @@ def search_symbol_literal(
             if not matched_pattern:
                 continue
 
-        try:
-            full_p = resolve_contained_path(repo_root, norm_p, must_exist=True)
-        except PathContainmentError:
-            continue
+        # Let PathContainmentError propagate if symlink escapes repo root
+        full_p = resolve_contained_path(repo_root, norm_p, must_exist=True)
 
         # Skip binary files containing NUL
         try:
@@ -139,6 +137,34 @@ def search_symbol_literal(
             continue
 
     return matches
+
+
+def check_source_dirty(repo_root: Path, mod_norm: str) -> Optional[str]:
+    res_status = run_git(["status", "--porcelain=v1", "-z", "--untracked-files=all"], repo_root)
+    if res_status.returncode == 0 and res_status.stdout:
+        raw = res_status.stdout
+        tokens = raw.split("\x00")
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if not token:
+                i += 1
+                continue
+            xy = token[:2]
+            path_part = token[3:]
+            i += 1
+            changed_paths = [path_part]
+            if (xy.startswith("R") or xy.startswith("C")) and i < len(tokens):
+                changed_paths.append(tokens[i])
+                i += 1
+
+            for p in changed_paths:
+                norm_p = normalize_rel_path(p)
+                if mod_norm and (norm_p.startswith(mod_norm + "/") or norm_p == mod_norm):
+                    path_in_mod = norm_p[len(mod_norm) :].lstrip("/")
+                    if not (path_in_mod.startswith(".ai-workflow/") or path_in_mod.startswith(".sandbox/")):
+                        return norm_p
+    return None
 
 
 def evidence_collect(
@@ -226,25 +252,14 @@ def evidence_collect(
     allowed_paths = scope_data.get("allowed_paths", [])
     forbidden_paths = scope_data.get("forbidden_paths", [])
 
-    # Step 3. Source dirty check
-    res_status = run_git(["status", "--porcelain", "--untracked-files=all"], repo_root)
-    if res_status.returncode == 0 and res_status.stdout.strip():
-        for line in res_status.stdout.splitlines():
-            clean_line = line.strip()
-            if not clean_line:
-                continue
-            parts = clean_line.split(maxsplit=1)
-            if len(parts) < 2:
-                continue
-            changed_p = normalize_rel_path(parts[1])
-            if mod_norm and (changed_p.startswith(mod_norm + "/") or changed_p == mod_norm):
-                path_in_mod = changed_p[len(mod_norm) :].lstrip("/")
-                if not (path_in_mod.startswith(".ai-workflow/") or path_in_mod.startswith(".sandbox/")):
-                    fail(
-                        2,
-                        make_result(action, "FAILED", "SOURCE_CHANGED_BEFORE_EVIDENCE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
-                        f"Source file changed before evidence: {changed_p}",
-                    )
+    # Step 3. Source dirty check (porcelain v1 -z)
+    dirty_p = check_source_dirty(repo_root, mod_norm)
+    if dirty_p:
+        fail(
+            2,
+            make_result(action, "FAILED", "SOURCE_CHANGED_BEFORE_EVIDENCE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
+            f"Source file changed before evidence: {dirty_p}",
+        )
 
     tracked_files = list_tracked_files(repo_root)
 
@@ -268,6 +283,7 @@ def evidence_collect(
                 "path": rel_f,
                 "exists": False,
                 "tracked": False,
+                "file_sha256": "0" * 64,
                 "evidence_command": f"git ls-files --error-unmatch -- {rel_f}",
             })
             continue
@@ -280,6 +296,7 @@ def evidence_collect(
                 "path": rel_f,
                 "exists": False,
                 "tracked": False,
+                "file_sha256": "0" * 64,
                 "evidence_command": f"git ls-files --error-unmatch -- {rel_f}",
             })
             continue
@@ -292,22 +309,25 @@ def evidence_collect(
         elif not f_tracked:
             failures.append(f"Required file untracked: {rel_f}")
 
-        entry: Dict[str, Any] = {
+        f_sha = sha256_file(full_f) if f_exists else "0" * 64
+        files_verified.append({
             "path": rel_f,
             "exists": f_exists,
             "tracked": f_tracked,
+            "file_sha256": f_sha,
             "evidence_command": f"git ls-files --error-unmatch -- {rel_f}",
-        }
-        if f_exists:
-            entry["file_sha256"] = sha256_file(full_f)
-        files_verified.append(entry)
+        })
 
     # Gather Symbols to verify
     symbols_verified: List[Dict[str, Any]] = []
 
     # Scope required_symbols
     for sym_str in scope_data.get("required_symbols", []):
-        matches = search_symbol_literal(repo_root, tracked_files, sym_str, None, allowed_paths, forbidden_paths)
+        try:
+            matches = search_symbol_literal(repo_root, tracked_files, sym_str, None, allowed_paths, forbidden_paths)
+        except PathContainmentError as e:
+            fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
+
         if not matches:
             failures.append(f"Required scope symbol not found: {sym_str}")
         symbols_verified.append({
@@ -321,7 +341,11 @@ def evidence_collect(
     for sym_obj in req_data.get("symbols_to_verify", []):
         sym_str = sym_obj.get("symbol", "")
         sym_paths = sym_obj.get("paths", [])
-        matches = search_symbol_literal(repo_root, tracked_files, sym_str, sym_paths, allowed_paths, forbidden_paths)
+        try:
+            matches = search_symbol_literal(repo_root, tracked_files, sym_str, sym_paths, allowed_paths, forbidden_paths)
+        except PathContainmentError as e:
+            fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
+
         if not matches:
             failures.append(f"Required request symbol not found: {sym_str}")
         symbols_verified.append({
@@ -371,40 +395,34 @@ def evidence_collect(
             failures.append(f"Diagnosis source line range invalid for {ds_path}: {exc}")
 
     # Compute Source Snapshot
-    src_snapshot_sha = compute_scope_snapshot(repo_root, mod_norm, allowed_paths, forbidden_paths)
+    try:
+        src_snapshot_sha = compute_scope_snapshot(repo_root, mod_norm, allowed_paths, forbidden_paths)
+    except PathContainmentError as e:
+        fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
 
     ready_to_implement = len(failures) == 0
 
     gen_at = utc_now()
+
+    # EVIDENCE.json payload ONLY contains pure evidence fields
     evidence_payload: Dict[str, Any] = {
         "schema_version": 1,
-        "action": action,
-        "status": "READY_FOR_IMPLEMENTATION" if ready_to_implement else "INSUFFICIENT_EVIDENCE",
-        "reason_code": "EVIDENCE_READY" if ready_to_implement else "INSUFFICIENT_EVIDENCE",
         "repository_root": ".",
-        "module_root": mod_norm,
-
         "branch": branch,
         "task_id": task_id,
         "module_id": module_json.get("module_id", ""),
         "base_commit": scope_data.get("base_commit", ""),
-
         "task_sha256": lock_data.get("task_sha256", ""),
         "scope_sha256": lock_data.get("scope_sha256", ""),
         "plan_sha256": lock_data.get("plan_sha256", ""),
         "plan_lock_sha256": lock_sha,
         "source_snapshot_sha256": src_snapshot_sha,
+        "generated_at": gen_at,
         "ready_to_implement": ready_to_implement,
-        "files_checked": len(files_verified),
-        "symbols_checked": len(symbols_verified),
-        "diagnosis_sources_checked": len(diagnosis_sources_out),
         "files_verified": files_verified,
         "symbols_verified": symbols_verified,
         "diagnosis": diagnosis_text,
         "diagnosis_sources": diagnosis_sources_out,
-        "failures": failures,
-        "dry_run": dry_run,
-        "files_created": [],
     }
 
     try:
@@ -428,13 +446,10 @@ def evidence_collect(
             if old_ready:
                 cmp_old = dict(old_evidence)
                 cmp_old.pop("generated_at", None)
-                cmp_old.pop("files_created", None)
                 cmp_new = dict(evidence_payload)
                 cmp_new.pop("generated_at", None)
-                cmp_new.pop("files_created", None)
 
                 if cmp_old == cmp_new:
-
                     res = make_result(
                         action,
                         "NO_CHANGES",
@@ -487,8 +502,6 @@ def evidence_collect(
         )
         print_result(res)
         sys.exit(exit_code)
-
-    evidence_payload["files_created"] = [evidence_rel]
 
     try:
         atomic_write_json(evidence_path, evidence_payload)
@@ -606,7 +619,11 @@ def evidence_verify(
     forbidden_paths = scope_data.get("forbidden_paths", [])
 
     # Verify Source Snapshot
-    current_src_snapshot = compute_scope_snapshot(repo_root, mod_norm, allowed_paths, forbidden_paths)
+    try:
+        current_src_snapshot = compute_scope_snapshot(repo_root, mod_norm, allowed_paths, forbidden_paths)
+    except PathContainmentError as e:
+        fail(5, make_result(action, "FAILED", "SOURCE_SNAPSHOT_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=current_lock_sha), str(e))
+
     if current_src_snapshot != evidence_data.get("source_snapshot_sha256"):
         fail(5, make_result(action, "FAILED", "SOURCE_SNAPSHOT_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=current_lock_sha, source_snapshot_sha256=current_src_snapshot))
 
@@ -646,7 +663,11 @@ def evidence_verify(
     # Verify Symbols
     for sym_item in evidence_data.get("symbols_verified", []):
         sym_str = sym_item.get("symbol", "")
-        matches = search_symbol_literal(repo_root, tracked_files, sym_str, None, allowed_paths, forbidden_paths)
+        try:
+            matches = search_symbol_literal(repo_root, tracked_files, sym_str, None, allowed_paths, forbidden_paths)
+        except PathContainmentError:
+            fail(5, make_result(action, "FAILED", "REQUIRED_SYMBOL_NOT_FOUND", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+
         if not matches:
             fail(5, make_result(action, "FAILED", "REQUIRED_SYMBOL_NOT_FOUND", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 

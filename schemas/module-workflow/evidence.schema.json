@@ -5,48 +5,36 @@
   "description": "Evidence collected prior to making code changes",
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
-    "action": { "type": "string", "enum": ["collect", "verify"] },
-    "status": {
-      "type": "string",
-      "enum": ["READY_FOR_IMPLEMENTATION", "INSUFFICIENT_EVIDENCE", "FAILED", "NO_CHANGES", "DRY_RUN"]
-    },
-    "reason_code": { "type": "string", "minLength": 1 },
-    "repository_root": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?![A-Za-z]:).*$" },
-
-
-    "module_root": { "type": "string", "minLength": 1 },
+    "repository_root": { "type": "string", "const": "." },
     "branch": { "type": "string", "minLength": 1 },
     "task_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
     "module_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
     "base_commit": {
-
       "type": "string",
-      "pattern": "^(?:[a-f0-9]{40})?$"
+      "pattern": "^[a-f0-9]{40}$"
     },
-    "task_sha256": { "type": "string", "pattern": "^(?:[a-f0-9]{64})?$" },
-    "scope_sha256": { "type": "string", "pattern": "^(?:[a-f0-9]{64})?$" },
-    "plan_sha256": { "type": "string", "pattern": "^(?:[a-f0-9]{64})?$" },
-    "plan_lock_sha256": { "type": "string", "pattern": "^(?:[a-f0-9]{64})?$" },
-    "source_snapshot_sha256": { "type": "string", "pattern": "^(?:[a-f0-9]{64})?$" },
+    "task_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "scope_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "plan_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "plan_lock_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source_snapshot_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "generated_at": { "type": "string" },
     "ready_to_implement": { "type": "boolean" },
-    "files_checked": { "type": "integer", "minimum": 0 },
-    "symbols_checked": { "type": "integer", "minimum": 0 },
-    "diagnosis_sources_checked": { "type": "integer", "minimum": 0 },
     "files_verified": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
           "path": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^(?!/)(?![A-Za-z]:).*$"
           },
           "exists": { "type": "boolean" },
           "tracked": { "type": "boolean" },
           "file_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
           "evidence_command": { "type": "string" }
         },
-        "required": ["path", "exists", "tracked", "file_sha256"],
+        "required": ["path", "exists", "tracked", "file_sha256", "evidence_command"],
         "additionalProperties": false
       }
     },
@@ -63,7 +51,7 @@
           },
           "found_count": { "type": "integer", "minimum": 0 }
         },
-        "required": ["symbol", "matches", "found_count"],
+        "required": ["symbol", "evidence_command", "matches", "found_count"],
         "additionalProperties": false
       }
     },
@@ -87,45 +75,26 @@
         "required": ["path", "line_start", "line_end", "reason", "file_sha256", "excerpt_sha256"],
         "additionalProperties": false
       }
-    },
-
-    "failures": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "dry_run": { "type": "boolean" },
-    "files_created": {
-      "type": "array",
-      "items": { "type": "string" }
     }
   },
   "required": [
     "schema_version",
-    "action",
-    "status",
-    "reason_code",
     "repository_root",
-    "module_root",
     "branch",
     "task_id",
     "module_id",
     "base_commit",
-
     "task_sha256",
     "scope_sha256",
     "plan_sha256",
     "plan_lock_sha256",
     "source_snapshot_sha256",
+    "generated_at",
     "ready_to_implement",
-    "files_checked",
-    "symbols_checked",
-    "diagnosis_sources_checked",
     "files_verified",
     "symbols_verified",
-    "diagnosis_sources",
-    "failures",
-    "dry_run",
-    "files_created"
+    "diagnosis",
+    "diagnosis_sources"
   ],
   "additionalProperties": false
 }

@@ -1,25 +1,17 @@
 {
   "schema_version": 1,
-  "action": "collect",
-  "status": "READY_FOR_IMPLEMENTATION",
-  "reason_code": "EVIDENCE_READY",
   "repository_root": ".",
-  "module_root": "src/Antigravity.DrawBeams",
   "branch": "task/drawbeams-fix-corridor",
   "task_id": "drawbeams-fix-corridor",
   "module_id": "antigravity-drawbeams",
   "base_commit": "68b008c476f949b166f2e26ac68010cb2b3259bf",
-
   "task_sha256": "ca247d8f188f899a6c0bf1f64f649bc100900697987ad086a7ee1052e6274fa6",
   "scope_sha256": "0d2689bbd90fa4b0c50977cb5478b578bd288ffe719ab012c704902ed65a5cd3",
   "plan_sha256": "4a838cd929b0f927edb3b9af9a2f86c6d303af0189c1c74a2c1b8c2cc7f3fb83",
-  "plan_lock_sha256": "3ac22e2d6cb74eee486d3dc2fe6113ed000272d855f2294fa00e82d999da91b3",
+  "plan_lock_sha256": "3ad673340979e08453c07871ad9ffa8f3d27001b6ae2aa562e8a96a720fa297e",
   "source_snapshot_sha256": "23e0111da2b9bc75a806c40690dcffbb95292a9ef02096970fccfd2a4d9223ee",
   "generated_at": "2026-08-01T02:30:00Z",
   "ready_to_implement": true,
-  "files_checked": 1,
-  "symbols_checked": 1,
-  "diagnosis_sources_checked": 1,
   "files_verified": [
     {
       "path": "src/Antigravity.DrawBeams/CreateBeamCommand.cs",
@@ -49,10 +41,5 @@
       "file_sha256": "941ef5d5aeabe603a465b8beacb1e9ea6a337d7cf4e72ca7663969f7d371291c",
       "excerpt_sha256": "fe45f7803644b08e73036d7346bcec814acbe73bfd7b30e69ab061f575c95a8a"
     }
-  ],
-  "failures": [],
-  "dry_run": false,
-  "files_created": [
-    "src/Antigravity.DrawBeams/.ai-workflow/EVIDENCE.json"
   ]
 }

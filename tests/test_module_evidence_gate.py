@@ -934,15 +934,68 @@ def test_evidence_rejects_source_symlink_escape(tmp_path: Path) -> None:
     req_p.write_text(json.dumps(r_data), encoding="utf-8")
 
     res = run_evidence_gate(repo, "collect")
-    # Will fail file containment or scope violation
-    assert res.returncode in (2, 5)
+    assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_REQUEST_INVALID"
+    assert not (mod_dir / ".ai-workflow" / "EVIDENCE.json").exists()
 
 
 def test_snapshot_does_not_follow_symlink_outside_repository(tmp_path: Path) -> None:
     repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
     sys.path.insert(0, str(REPO_ROOT / "skills" / "module-workflow" / "scripts"))
     from module_contract_utils import compute_scope_snapshot
-    # Call compute_scope_snapshot, ensure it completes safely without throwing unexpected errors
     snap = compute_scope_snapshot(repo, "src/Antigravity.DrawBeams", ["src/Antigravity.DrawBeams/**"], [])
     assert isinstance(snap, str)
     assert len(snap) == 64
+
+
+def test_git_status_porcelain_z_rename_source_outside_module(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    outside_file = repo / "external_source.txt"
+    outside_file.write_text("external content\n", encoding="utf-8")
+    subprocess.run(["git", "add", "external_source.txt"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "add external file"], cwd=repo, check=True, capture_output=True)
+
+    # Rename external file into module
+    target_in_mod = mod_dir / "renamed_external.txt"
+    subprocess.run(["git", "mv", "external_source.txt", str(target_in_mod)], cwd=repo, check=True, capture_output=True)
+
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "SOURCE_CHANGED_BEFORE_EVIDENCE"
+    assert not (mod_dir / ".ai-workflow" / "EVIDENCE.json").exists()
+
+
+def test_git_status_porcelain_z_filename_with_spaces_and_special_chars(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    space_file = mod_dir / "file with spaces #1.txt"
+    space_file.write_text("content with space", encoding="utf-8")
+    # Dirty file before evidence collect
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "SOURCE_CHANGED_BEFORE_EVIDENCE"
+    assert not (mod_dir / ".ai-workflow" / "EVIDENCE.json").exists()
+
+
+def test_real_symlink_containment_failure(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    outside_dir = tmp_path / "outside_dir"
+    outside_dir.mkdir()
+    outside_file = outside_dir / "secret.txt"
+    outside_file.write_text("secret", encoding="utf-8")
+
+    link_path = mod_dir / "symlink_outside.txt"
+    try:
+        os.symlink(outside_file, link_path)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlink creation not permitted on this platform/user level")
+
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "module-workflow" / "scripts"))
+    from module_contract_utils import compute_scope_snapshot, PathContainmentError
+
+    subprocess.run(["git", "add", str(link_path)], cwd=repo, check=True, capture_output=True)
+
+    with pytest.raises(PathContainmentError):
+        compute_scope_snapshot(repo, "src/Antigravity.DrawBeams", ["src/Antigravity.DrawBeams/**"], [])
