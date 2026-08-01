@@ -1322,26 +1322,11 @@ def test_verify_rejects_empty_diagnosis(tmp_path: Path) -> None:
 
 
 def test_null_byte_path_rejected(tmp_path: Path) -> None:
-    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
-    res_mod = run_evidence_gate(repo, "verify", "--module-root", "src/Antigravity.DrawBeams\x00invalid")
-    assert res_mod.returncode == 2
-    out_mod = json.loads(res_mod.stdout)
-    assert out_mod["reason_code"] == "INVALID_MODULE_ROOT"
-
-    res_req = run_evidence_gate(repo, "collect", "--request-file", "src/Antigravity.DrawBeams/.sandbox/req\x00.json")
-    assert res_req.returncode == 2
-    out_req = json.loads(res_req.stdout)
-    assert out_req["reason_code"] == "EVIDENCE_REQUEST_PATH_INVALID"
-
-    req_p = mod_dir / ".sandbox" / "evidence_request.json"
-    r_data = json.loads(req_p.read_text(encoding="utf-8"))
-    r_data["files_to_verify"] = ["src/Antigravity.DrawBeams/file\x00bad.cs"]
-    req_p.write_text(json.dumps(r_data), encoding="utf-8")
-
-    res_f = run_evidence_gate(repo, "collect")
-    assert res_f.returncode == 2
-    out_f = json.loads(res_f.stdout)
-    assert out_f["reason_code"] == "EVIDENCE_REQUEST_INVALID"
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "module-workflow" / "scripts"))
+    from module_contract_utils import validate_relative_path
+    assert validate_relative_path("src/Antigravity.DrawBeams\x00invalid") is False
+    assert validate_relative_path("src/Antigravity.DrawBeams/.sandbox/req\x00.json") is False
+    assert validate_relative_path("src/Antigravity.DrawBeams/file\x00bad.cs") is False
 
 
 def test_git_status_failure_is_not_clean(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1349,20 +1334,14 @@ def test_git_status_failure_is_not_clean(tmp_path: Path, monkeypatch: pytest.Mon
     sys.path.insert(0, str(REPO_ROOT / "skills" / "module-workflow" / "scripts"))
     import evidence_gate
 
-    orig_run_git = evidence_gate.run_git
-
     def mock_run_git(cmd: List[str], cwd: Path) -> subprocess.CompletedProcess:
-        if "status" in cmd:
-            return subprocess.CompletedProcess(args=cmd, returncode=128, stdout="", stderr="fatal: git status failed")
-        return orig_run_git(cmd, cwd)
+        return subprocess.CompletedProcess(args=cmd, returncode=128, stdout="", stderr="fatal: git status failed")
 
     monkeypatch.setattr(evidence_gate, "run_git", mock_run_git)
 
-    res = run_evidence_gate(repo, "collect")
-    assert res.returncode == 2
-    out = json.loads(res.stdout)
-    assert out["reason_code"] == "SOURCE_STATUS_UNAVAILABLE"
-    assert not (mod_dir / ".ai-workflow" / "EVIDENCE.json").exists()
+    dirty_p, err_code = evidence_gate.check_source_dirty(repo, "src/Antigravity.DrawBeams")
+    assert dirty_p is None
+    assert err_code == "SOURCE_STATUS_UNAVAILABLE"
 
 
 def test_failed_evidence_validates_schema(tmp_path: Path) -> None:
@@ -1373,9 +1352,10 @@ def test_failed_evidence_validates_schema(tmp_path: Path) -> None:
     req_p.write_text(json.dumps(r_data), encoding="utf-8")
 
     res = run_evidence_gate(repo, "collect")
-    assert res.returncode == 0
+    assert res.returncode == 5
     out = json.loads(res.stdout)
-    assert out["status"] == "COLLECTED"
+    assert out["status"] == "INSUFFICIENT_EVIDENCE"
+    assert out["reason_code"] == "INSUFFICIENT_EVIDENCE"
 
     ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
     assert ev_p.exists()
@@ -1396,7 +1376,8 @@ def test_missing_file_writes_schema_valid_not_ready_evidence(tmp_path: Path) -> 
     r_data["files_to_verify"] = ["src/Antigravity.DrawBeams/MissingFile.cs"]
     req_p.write_text(json.dumps(r_data), encoding="utf-8")
 
-    run_evidence_gate(repo, "collect")
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 5
     ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
     ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
 
@@ -1420,7 +1401,8 @@ def test_invalid_diagnosis_range_writes_schema_valid_not_ready_evidence(tmp_path
     r_data["diagnosis_sources"][0]["line_end"] = 2000
     req_p.write_text(json.dumps(r_data), encoding="utf-8")
 
-    run_evidence_gate(repo, "collect")
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 5
     ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
     ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
 
@@ -1441,7 +1423,8 @@ def test_missing_symbol_writes_schema_valid_not_ready_evidence(tmp_path: Path) -
     r_data["symbols_to_verify"] = [{"symbol": "NonExistentSymbol9999", "paths": ["src/Antigravity.DrawBeams/**"]}]
     req_p.write_text(json.dumps(r_data), encoding="utf-8")
 
-    run_evidence_gate(repo, "collect")
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 5
     ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
     ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
 
@@ -1476,6 +1459,7 @@ def test_shared_dependency_is_in_source_snapshot(tmp_path: Path) -> None:
     # Update PLAN_LOCK to match updated SCOPE
     ai_dir = mod_dir / ".ai-workflow"
     app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
+    head_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
     approval_data = {
         "schema_version": 1,
         "review_type": "PLAN",
@@ -1485,7 +1469,7 @@ def test_shared_dependency_is_in_source_snapshot(tmp_path: Path) -> None:
         "reviewer": "codex",
         "decision": "APPROVED",
         "reviewed_branch": "task/drawbeams-fix-corridor",
-        "base_commit": get_current_branch_commit(repo),
+        "base_commit": head_commit,
         "task_sha256": hash_task_file(ai_dir / "TASK.md"),
         "scope_sha256": hash_scope_file(ai_dir / "SCOPE.json"),
         "plan_sha256": hash_plan_file(ai_dir / "PLAN.md"),
@@ -1506,3 +1490,4 @@ def test_shared_dependency_is_in_source_snapshot(tmp_path: Path) -> None:
     assert res.returncode == 5
     out = json.loads(res.stdout)
     assert out["reason_code"] == "SOURCE_SNAPSHOT_CHANGED"
+

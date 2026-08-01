@@ -356,12 +356,13 @@ def test_invalid_sha256_rejected(schemas_dir: Path, examples_dir: Path) -> None:
         validate_schema_instance(schema, instance)
 
 
-def test_evidence_without_diagnosis_source_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+def test_evidence_without_diagnosis_source_allowed_in_schema(schemas_dir: Path, examples_dir: Path) -> None:
     schema = load_json(schemas_dir / "evidence.schema.json")
     instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    instance["ready_to_implement"] = False
     instance["diagnosis_sources"] = []
-    with pytest.raises(ValidationError):
-        validate_schema_instance(schema, instance)
+    validate_schema_instance(schema, instance)
+
 
 
 def test_evidence_source_with_invalid_line_range_rejected(schemas_dir: Path, examples_dir: Path) -> None:

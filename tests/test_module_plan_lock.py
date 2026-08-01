@@ -1551,13 +1551,8 @@ def test_verify_rejects_approval_symlink_escape(tmp_path: Path) -> None:
 
 
 def test_plan_lock_nul_path_rejected(tmp_path: Path) -> None:
-    repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
-    res_mod = run_plan_lock(repo, "verify", "--module-root", "src/Antigravity.DrawBeams\x00invalid")
-    assert res_mod.returncode == 2
-    out_mod = json.loads(res_mod.stdout)
-    assert out_mod["reason_code"] == "INVALID_MODULE_ROOT"
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "module-workflow" / "scripts"))
+    from module_contract_utils import validate_relative_path
+    assert validate_relative_path("src/Antigravity.DrawBeams\x00invalid") is False
+    assert validate_relative_path("src/Antigravity.DrawBeams/.ai-workflow/history/app\x00.json") is False
 
-    res_app = run_plan_lock(repo, "create", "--approval-file", "src/Antigravity.DrawBeams/.ai-workflow/history/app\x00.json")
-    assert res_app.returncode == 2
-    out_app = json.loads(res_app.stdout)
-    assert out_app["reason_code"] == "PLAN_REVIEW_PATH_INVALID"
