@@ -381,8 +381,9 @@ def evidence_collect(
         "action": action,
         "status": "READY_FOR_IMPLEMENTATION" if ready_to_implement else "INSUFFICIENT_EVIDENCE",
         "reason_code": "EVIDENCE_READY" if ready_to_implement else "INSUFFICIENT_EVIDENCE",
-        "repository_root": repo_root_str,
+        "repository_root": ".",
         "module_root": mod_norm,
+
         "branch": branch,
         "task_id": task_id,
         "module_id": module_json.get("module_id", ""),

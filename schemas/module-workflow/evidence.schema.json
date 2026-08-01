@@ -11,7 +11,8 @@
       "enum": ["READY_FOR_IMPLEMENTATION", "INSUFFICIENT_EVIDENCE", "FAILED", "NO_CHANGES", "DRY_RUN"]
     },
     "reason_code": { "type": "string", "minLength": 1 },
-    "repository_root": { "type": "string", "minLength": 1 },
+    "repository_root": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?![A-Za-z]:).*$" },
+
 
     "module_root": { "type": "string", "minLength": 1 },
     "branch": { "type": "string", "minLength": 1 },
