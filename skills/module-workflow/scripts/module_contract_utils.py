@@ -592,17 +592,19 @@ def validate_evidence_contract(payload: Any) -> None:
         "schema_version", "action", "status", "reason_code", "repository_root",
         "module_root", "branch", "task_id", "base_commit", "task_sha256",
         "scope_sha256", "plan_sha256", "plan_lock_sha256", "source_snapshot_sha256",
-        "ready_to_implement", "files_checked", "symbols_checked",
+        "generated_at", "ready_to_implement", "files_checked", "symbols_checked",
         "diagnosis_sources_checked", "files_verified", "symbols_verified",
-        "diagnosis_sources", "failures", "dry_run", "files_created"
+        "diagnosis", "diagnosis_sources", "failures", "dry_run", "files_created"
     }
     extra_keys = set(payload.keys()) - allowed_keys
     if extra_keys:
         raise ContractValidationError(f"Evidence payload has unexpected properties: {sorted(extra_keys)}")
 
-    missing_keys = allowed_keys - set(payload.keys())
+    required_keys = allowed_keys - {"generated_at"}
+    missing_keys = required_keys - set(payload.keys())
     if missing_keys:
         raise ContractValidationError(f"Evidence payload missing required property: {sorted(missing_keys)}")
+
 
     if payload["schema_version"] != 1 or isinstance(payload["schema_version"], bool):
         raise ContractValidationError("Evidence schema_version must be integer 1.")
