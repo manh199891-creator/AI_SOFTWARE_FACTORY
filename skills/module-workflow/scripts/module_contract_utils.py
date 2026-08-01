@@ -767,7 +767,8 @@ def verify_plan_lock_context(
     if lock_data["task_id"] != scope_json["task_id"]:
         raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Task ID mismatch in PLAN_LOCK.json", exit_code=5)
     if lock_data["branch"] != current_branch:
-        raise PlanLockVerificationError("PLAN_LOCK_INVALID", f"Branch mismatch in PLAN_LOCK.json ({lock_data['branch']} != {current_branch})", exit_code=5)
+        raise PlanLockVerificationError("BRANCH_MISMATCH", f"Branch mismatch in PLAN_LOCK.json ({lock_data['branch']} != {current_branch})", exit_code=5)
+
     if lock_data["base_commit"] != scope_json["base_commit"]:
         raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Base commit mismatch in PLAN_LOCK.json", exit_code=5)
 

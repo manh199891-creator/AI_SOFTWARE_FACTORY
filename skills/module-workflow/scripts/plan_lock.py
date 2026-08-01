@@ -34,7 +34,9 @@ from module_contract_utils import (
     resolve_contained_path,
     run_git,
     sha256_bytes,
+    sha256_file,
     validate_plan_lock_contract,
+
     validate_plan_review_contract,
     validate_relative_path,
     validate_repository_root,
@@ -162,11 +164,12 @@ def plan_lock_create(
         approval_full_path = resolve_contained_path(
             repo_root,
             approval_file_rel,
-            must_exist=True,
+            must_exist=False,
             containment_root=history_dir,
         )
     except PathContainmentError as e:
         fail(2, make_result(action, "FAILED", "PLAN_REVIEW_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm), str(e))
+
 
     branch = get_current_branch(repo_root)
     if not branch or branch in PROTECTED_BRANCHES:
@@ -225,8 +228,12 @@ def plan_lock_create(
         fail(2, make_result(action, "FAILED", plan_err, repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 
     # Load & Validate Approval Contract
+    if not approval_full_path.exists():
+        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_MISSING", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), f"Approval file missing: {approval_file_rel}")
+
     try:
         approval_data = load_json(approval_full_path)
+
     except Exception as e:
         fail(2, make_result(action, "FAILED", "PLAN_REVIEW_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), f"Invalid JSON: {e}")
 
