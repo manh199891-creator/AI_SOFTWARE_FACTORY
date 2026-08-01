@@ -1496,3 +1496,162 @@ def test_shared_dependency_is_in_source_snapshot(tmp_path: Path) -> None:
     out = json.loads(res.stdout)
     assert out["reason_code"] == "SOURCE_SNAPSHOT_CHANGED"
 
+
+def test_collect_rejects_dirty_shared_dependency_in_allowed_scope(tmp_path: Path) -> None:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+
+    # Create tracked file shared/Common/BeamHelper.cs
+    shared_dir = repo / "shared" / "Common"
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    shared_file = shared_dir / "BeamHelper.cs"
+    shared_file.write_text("// initial shared code\n", encoding="utf-8")
+    subprocess.run(["git", "add", "shared/Common/BeamHelper.cs"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "add shared helper"], cwd=repo, check=True, capture_output=True)
+
+    head_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
+    ai_dir = mod_dir / ".ai-workflow"
+    scope_p = ai_dir / "SCOPE.json"
+    s_data = json.loads(scope_p.read_text(encoding="utf-8"))
+    s_data["allowed_paths"].append("shared/Common/**")
+    s_data["base_commit"] = head_commit
+    scope_p.write_text(json.dumps(s_data), encoding="utf-8")
+
+    # Update PLAN_LOCK to match updated SCOPE
+    app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
+    approval_data = {
+        "schema_version": 1,
+        "review_type": "PLAN",
+        "task_id": "drawbeams-fix-corridor",
+        "module_id": "antigravity-drawbeams",
+        "review_run_id": "plan-review-run-001",
+        "reviewer": "codex",
+        "decision": "APPROVED",
+        "reviewed_branch": "task/drawbeams-fix-corridor",
+        "base_commit": head_commit,
+        "task_sha256": hash_task_file(ai_dir / "TASK.md"),
+        "scope_sha256": hash_scope_file(ai_dir / "SCOPE.json"),
+        "plan_sha256": hash_plan_file(ai_dir / "PLAN.md"),
+        "reviewed_at": "2026-08-01T02:00:00Z",
+        "findings": []
+    }
+    app_file = repo / app_rel
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+    (ai_dir / "PLAN_LOCK.json").unlink(missing_ok=True)
+    plan_lock_script = REPO_ROOT / "skills" / "module-workflow" / "scripts" / "plan_lock.py"
+    subprocess.run([sys.executable, str(plan_lock_script), "create", "--repository-root", str(repo), "--module-root", "src/Antigravity.DrawBeams", "--approval-file", app_rel], cwd=repo, check=True, capture_output=True)
+
+    # Edit shared file BEFORE evidence collect
+    shared_file.write_text("// dirty shared code\n", encoding="utf-8")
+
+    res = run_evidence_gate(repo, "collect")
+    assert res.returncode == 2
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "SOURCE_CHANGED_BEFORE_EVIDENCE"
+    assert not (ai_dir / "EVIDENCE.json").exists()
+
+
+def setup_failed_evidence_repo(tmp_path: Path) -> Tuple[Path, Path, Path]:
+    repo, mod_dir, _ = setup_locked_module_repo(tmp_path)
+    req_p = mod_dir / ".sandbox" / "evidence_request.json"
+    r_data = json.loads(req_p.read_text(encoding="utf-8"))
+    r_data["files_to_verify"] = ["src/Antigravity.DrawBeams/MissingFile.cs"]
+    req_p.write_text(json.dumps(r_data), encoding="utf-8")
+
+    run_evidence_gate(repo, "collect")
+    ev_p = mod_dir / ".ai-workflow" / "EVIDENCE.json"
+    assert ev_p.exists()
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    assert ev_data["ready_to_implement"] is False
+    return repo, mod_dir, ev_p
+
+
+def test_failed_evidence_rejects_invalid_base_commit(tmp_path: Path) -> None:
+    repo, mod_dir, ev_p = setup_failed_evidence_repo(tmp_path)
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["base_commit"] = "invalid_commit_sha"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    assert "Traceback" not in res.stderr
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_failed_evidence_rejects_invalid_task_sha256(tmp_path: Path) -> None:
+    repo, mod_dir, ev_p = setup_failed_evidence_repo(tmp_path)
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["task_sha256"] = "invalid_hash"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    assert "Traceback" not in res.stderr
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_failed_evidence_rejects_invalid_scope_sha256(tmp_path: Path) -> None:
+    repo, mod_dir, ev_p = setup_failed_evidence_repo(tmp_path)
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["scope_sha256"] = "invalid_hash"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    assert "Traceback" not in res.stderr
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_failed_evidence_rejects_invalid_plan_sha256(tmp_path: Path) -> None:
+    repo, mod_dir, ev_p = setup_failed_evidence_repo(tmp_path)
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["plan_sha256"] = "invalid_hash"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    assert "Traceback" not in res.stderr
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_failed_evidence_rejects_invalid_plan_lock_sha256(tmp_path: Path) -> None:
+    repo, mod_dir, ev_p = setup_failed_evidence_repo(tmp_path)
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["plan_lock_sha256"] = "invalid_hash"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    assert "Traceback" not in res.stderr
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_failed_evidence_rejects_invalid_source_snapshot_sha256(tmp_path: Path) -> None:
+    repo, mod_dir, ev_p = setup_failed_evidence_repo(tmp_path)
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["source_snapshot_sha256"] = "invalid_hash"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    assert "Traceback" not in res.stderr
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+
+
+def test_failed_evidence_rejects_invalid_generated_at(tmp_path: Path) -> None:
+    repo, mod_dir, ev_p = setup_failed_evidence_repo(tmp_path)
+    ev_data = json.loads(ev_p.read_text(encoding="utf-8"))
+    ev_data["generated_at"] = "2026-08-01T02:30:00"
+    ev_p.write_text(json.dumps(ev_data), encoding="utf-8")
+
+    res = run_evidence_gate(repo, "verify")
+    assert res.returncode == 5
+    assert "Traceback" not in res.stderr
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "EVIDENCE_INVALID"
+

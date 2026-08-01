@@ -755,10 +755,19 @@ def validate_evidence_contract(payload: Any) -> None:
     if not isinstance(payload["module_id"], str) or not MODULE_ID_RE.match(payload["module_id"]):
         raise ContractValidationError(f"Evidence module_id invalid: {payload['module_id']!r}")
 
+    if not isinstance(payload["base_commit"], str) or not GIT_SHA_LOWER_RE.match(payload["base_commit"]):
+        raise ContractValidationError(f"Evidence base_commit invalid: {payload.get('base_commit')!r}")
+
+    for sha_key in ("task_sha256", "scope_sha256", "plan_sha256", "plan_lock_sha256", "source_snapshot_sha256"):
+        val = payload.get(sha_key)
+        if not isinstance(val, str) or not SHA256_LOWER_RE.match(val):
+            raise ContractValidationError(f"Evidence {sha_key} invalid: {val!r}")
+
     parse_iso_datetime(payload["generated_at"])
 
     if not isinstance(payload["ready_to_implement"], bool):
         raise ContractValidationError("Evidence ready_to_implement must be boolean.")
+
 
     if not isinstance(payload["files_verified"], list):
         raise ContractValidationError("Evidence files_verified must be an array.")
@@ -857,14 +866,8 @@ def validate_evidence_contract(payload: Any) -> None:
 
     # Additional strict checks when ready_to_implement is true
     if payload["ready_to_implement"]:
-        if not isinstance(payload["base_commit"], str) or not GIT_SHA_LOWER_RE.match(payload["base_commit"]):
-            raise ContractValidationError(f"Evidence base_commit invalid when ready: {payload['base_commit']!r}")
-        for sha_key in ("task_sha256", "scope_sha256", "plan_sha256", "plan_lock_sha256", "source_snapshot_sha256"):
-            val = payload[sha_key]
-            if not isinstance(val, str) or not SHA256_LOWER_RE.match(val):
-                raise ContractValidationError(f"Evidence {sha_key} invalid when ready: {val!r}")
-
         if len(payload["diagnosis"]) < 20:
+
             raise ContractValidationError("Evidence diagnosis must be at least 20 characters when ready_to_implement is true.")
         if len(payload["files_verified"]) < 1:
             raise ContractValidationError("Evidence files_verified must contain at least 1 item when ready_to_implement is true.")

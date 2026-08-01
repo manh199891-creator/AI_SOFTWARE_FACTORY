@@ -140,7 +140,11 @@ def search_symbol_literal(
 
 
 
-def check_source_dirty(repo_root: Path, mod_norm: str) -> Tuple[Optional[str], Optional[str]]:
+def check_source_dirty(
+    repo_root: Path,
+    allowed_paths: List[str],
+    forbidden_paths: List[str],
+) -> Tuple[Optional[str], Optional[str]]:
     res_status = run_git(["status", "--porcelain=v1", "-z", "--untracked-files=all"], repo_root)
     if res_status.returncode != 0:
         return None, "SOURCE_STATUS_UNAVAILABLE"
@@ -163,11 +167,18 @@ def check_source_dirty(repo_root: Path, mod_norm: str) -> Tuple[Optional[str], O
 
             for p in changed_paths:
                 norm_p = normalize_rel_path(p)
-                if mod_norm and (norm_p.startswith(mod_norm + "/") or norm_p == mod_norm):
-                    path_in_mod = norm_p[len(mod_norm) :].lstrip("/")
-                    if not (path_in_mod.startswith(".ai-workflow/") or path_in_mod.startswith(".sandbox/")):
-                        return norm_p, None
+                segments = norm_p.split("/")
+                if ".ai-workflow" in segments or ".sandbox" in segments:
+                    continue
+
+                if any(path_matches_pattern(norm_p, f_pat) for f_pat in forbidden_paths):
+                    continue
+
+                if any(path_matches_pattern(norm_p, a_pat) for a_pat in allowed_paths):
+                    return norm_p, None
+
     return None, None
+
 
 
 def evidence_collect(
@@ -256,7 +267,8 @@ def evidence_collect(
     forbidden_paths = scope_data.get("forbidden_paths", [])
 
     # Step 3. Source dirty check (porcelain v1 -z)
-    dirty_p, err_code = check_source_dirty(repo_root, mod_norm)
+    dirty_p, err_code = check_source_dirty(repo_root, allowed_paths, forbidden_paths)
+
     if err_code == "SOURCE_STATUS_UNAVAILABLE":
         fail(
             2,
