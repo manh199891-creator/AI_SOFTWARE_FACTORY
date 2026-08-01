@@ -839,3 +839,73 @@ def test_powershell_wrapper_stdout_is_unmodified_json(tmp_path: Path) -> None:
     # stdout must parse as a single JSON object
     obj = json.loads(result.stdout)
     assert isinstance(obj, dict)
+
+
+# ---------------------------------------------------------------------------
+# Phase C PLAN.md Bootstrap Tests
+# ---------------------------------------------------------------------------
+
+
+def test_bootstrap_creates_plan_md(tmp_path: Path) -> None:
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    res = run_bootstrap(repo)
+    assert res.returncode == 0, res.stderr
+    plan_path = module_abs / ".ai-workflow" / "PLAN.md"
+    assert plan_path.exists()
+
+
+def test_generated_plan_md_matches_canonical_template(tmp_path: Path) -> None:
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    res = run_bootstrap(repo)
+    assert res.returncode == 0, res.stderr
+    plan_path = module_abs / ".ai-workflow" / "PLAN.md"
+    canonical_path = REPO_ROOT / "templates" / "module-workflow" / ".ai-workflow" / "PLAN.md"
+    assert plan_path.read_text(encoding="utf-8") == canonical_path.read_text(encoding="utf-8")
+
+
+def test_existing_different_plan_md_causes_conflict(tmp_path: Path) -> None:
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    plan_path = module_abs / ".ai-workflow" / "PLAN.md"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_path.write_text("# Custom PLAN\nDifferent content\n", encoding="utf-8")
+
+    res = run_bootstrap(repo)
+    assert res.returncode == 3
+    out = parse_stdout(res)
+    assert out["reason_code"] == "BOOTSTRAP_CONFLICT"
+
+
+def test_second_run_preserves_plan_md(tmp_path: Path) -> None:
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    res1 = run_bootstrap(repo)
+    assert res1.returncode == 0
+    res2 = run_bootstrap(repo)
+    assert res2.returncode == 0
+    out2 = parse_stdout(res2)
+    assert out2["status"] == "NO_CHANGES"
+
+
+def test_old_bootstrap_tree_is_upgraded_with_plan_md(tmp_path: Path) -> None:
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    # Run bootstrap first
+    res1 = run_bootstrap(repo)
+    assert res1.returncode == 0
+
+    # Remove PLAN.md simulating old tree
+    plan_path = module_abs / ".ai-workflow" / "PLAN.md"
+    plan_path.unlink()
+
+    # Re-run bootstrap
+    res2 = run_bootstrap(repo)
+    assert res2.returncode == 0
+    out2 = parse_stdout(res2)
+    assert out2["status"] == "CREATED"
+    assert plan_path.exists()
+
+
+def test_generated_contracts_contains_plan_md(tmp_path: Path) -> None:
+    repo, _, _ = init_temp_repo(tmp_path)
+    res = run_bootstrap(repo)
+    assert res.returncode == 0
+    out = parse_stdout(res)
+    assert ".ai-workflow/PLAN.md" in out["generated_contracts"]

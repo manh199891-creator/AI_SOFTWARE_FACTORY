@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "drawbeams-fix-corridor",
+  "module_id": "antigravity-drawbeams",
+  "files_to_verify": [
+    "src/Antigravity.DrawBeams/CreateBeamCommand.cs"
+  ],
+  "symbols_to_verify": [
+    {
+      "symbol": "CreateBeamCommand",
+      "paths": [
+        "src/Antigravity.DrawBeams/**/*.cs"
+      ]
+    }
+  ],
+  "diagnosis": "The command reads the selected element before validating that the selection contains a supported beam element.",
+  "diagnosis_sources": [
+    {
+      "path": "src/Antigravity.DrawBeams/CreateBeamCommand.cs",
+      "line_start": 20,
+      "line_end": 35,
+      "reason": "The selected element is consumed before the expected validation branch."
+    }
+  ]
+}

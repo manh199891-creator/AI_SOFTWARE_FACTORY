@@ -49,6 +49,7 @@ SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 # Canonical template paths (relative to templates/module-workflow/)
 MARKDOWN_TEMPLATES = [
     ".ai-workflow/TASK.md",
+    ".ai-workflow/PLAN.md",
     ".ai-workflow/REVIEW.md",
     ".sandbox/README.md",
 ]
@@ -63,6 +64,7 @@ PLANNER_OWNED = [
     ".ai-workflow/MODULE.json",
     ".ai-workflow/TASK.md",
     ".ai-workflow/SCOPE.json",
+    ".ai-workflow/PLAN.md",
     ".ai-workflow/REVIEW.md",
     ".ai-workflow/history/.gitkeep",
     ".sandbox/README.md",
@@ -584,6 +586,7 @@ def bootstrap(args: argparse.Namespace) -> None:
     validate_canonical_templates(tmpl_root)
 
     task_md_content = read_template(tmpl_root, ".ai-workflow/TASK.md")
+    plan_md_content = read_template(tmpl_root, ".ai-workflow/PLAN.md")
     review_md_content = read_template(tmpl_root, ".ai-workflow/REVIEW.md")
     sandbox_readme_content = read_template(tmpl_root, ".sandbox/README.md")
 
@@ -611,6 +614,7 @@ def bootstrap(args: argparse.Namespace) -> None:
         module_abs / ".ai-workflow" / "MODULE.json": module_json_content,
         module_abs / ".ai-workflow" / "TASK.md": task_md_content,
         module_abs / ".ai-workflow" / "SCOPE.json": scope_json_content,
+        module_abs / ".ai-workflow" / "PLAN.md": plan_md_content,
         module_abs / ".ai-workflow" / "REVIEW.md": review_md_content,
         module_abs / ".ai-workflow" / "history" / ".gitkeep": "",
         module_abs / ".sandbox" / "README.md": sandbox_readme_content,
@@ -792,6 +796,7 @@ def bootstrap(args: argparse.Namespace) -> None:
             ".ai-workflow/MODULE.json",
             ".ai-workflow/TASK.md",
             ".ai-workflow/SCOPE.json",
+            ".ai-workflow/PLAN.md",
             ".ai-workflow/REVIEW.md",
         ],
     )

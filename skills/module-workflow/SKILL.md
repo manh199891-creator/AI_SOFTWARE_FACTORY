@@ -1,140 +1,77 @@
 ---
 name: module-workflow
-description: Initialize the canonical module-local AI workflow and sandbox structure for an existing Revit, Navisworks, or .NET add-in module.
+description: Initialize and manage canonical module-local AI workflow contracts, Plan Lock, and Evidence Gate for Revit, Navisworks, or .NET add-in modules.
 ---
 
-# Module Workflow Bootstrap Skill
+# Module Workflow Skill
 
 ## What this skill does
 
-Runs the `module_init.ps1` / `module_bootstrap.py` tool to create the canonical
-`.ai-workflow/` and `.sandbox/` skeleton inside an **already-existing** source
-module directory.
+1. **Module Bootstrap** (`module_init.ps1` / `module_bootstrap.py`):
+   Creates the canonical `.ai-workflow/` and `.sandbox/` skeleton inside an existing module directory (including `PLAN.md`).
 
-It generates:
-- `.ai-workflow/MODULE.json` — machine-readable module contract (Phase A schema)
-- `.ai-workflow/SCOPE.json` — placeholder scope contract at status `DRAFT`
-- `.ai-workflow/TASK.md` — canonical task template
-- `.ai-workflow/REVIEW.md` — canonical review template
-- `.ai-workflow/history/.gitkeep` — tracked directory placeholder
-- `.sandbox/README.md` — sandbox readme from canonical template
-- `.sandbox/bin/`, `obj/`, `addin/`, `test-models/`, `logs/`, `results/` — empty dirs
-- `<module-root>/.gitignore` — managed block protecting sandbox from version control
+2. **Plan Lock** (`plan_lock.ps1` / `plan_lock.py`):
+   Locks `TASK.md` + `SCOPE.json` + `PLAN.md` via SHA-256 after Codex plan review approval, creating `.ai-workflow/PLAN_LOCK.json`.
 
-## What this skill does NOT do
+3. **Evidence Gate** (`evidence_gate.ps1` / `evidence_gate.py`):
+   Verifies files, symbols, diagnosis sources, and source snapshot SHA-256 before Antigravity is allowed to make code changes, creating `.ai-workflow/EVIDENCE.json`.
 
-- Create or scaffold new source modules (tool only bootstraps an existing module).
-- Run Antigravity or any agent pipeline.
-- Run Codex review.
-- Create a task branch automatically.
-- Build DLL or run Revit/Navisworks tests.
-- Create generated task runtime files: `PLAN_LOCK.json`, `EVIDENCE.json`,
-  `DELIVERY.json`, `.sandbox/manifest.json`.
-- Sync or promote DLL to production.
-- Overwrite an existing, differing workflow contract.
-- Run on a protected branch (`main`, `master`, `develop`, `release`).
+## Workflows
 
-This skill has **not** been deployed into the production runtime manifest.
-It is invoked manually during module onboarding.
+### Plan Preparation & Review Handoff
 
----
+1. Planner/User fills `TASK.md`, `SCOPE.json`, `PLAN.md`.
+2. Codex reviews plan and generates `plan-review-run-xxx.json` in `.ai-workflow/history/`.
+3. Run `plan_lock.ps1 create` to validate review and lock contract files.
+4. Verify lock anytime using `plan_lock.ps1 verify`.
 
-## Invocation — PowerShell
+### Evidence Request & Collection
 
+1. Antigravity prepares `.sandbox/evidence_request.json`.
+2. Run `evidence_gate.ps1 collect` to check file tracking, symbol presence, excerpt hashes, and source snapshot.
+3. Run `evidence_gate.ps1 verify` prior to starting implementation.
+
+## Invocations
+
+### Plan Lock CLI
 ```powershell
-.\skills\module-workflow\scripts\module_init.ps1 `
-  -RepositoryRoot  "E:\AI_SOFTWARE_FACTORY" `
-  -ModuleRoot      "src\Antigravity.DrawBeams" `
-  -ModuleId        "antigravity.drawbeams" `
-  -ModuleName      "Antigravity.DrawBeams" `
-  -ProjectFile     "src\Antigravity.DrawBeams\Antigravity.DrawBeams.csproj" `
-  -Platform        "revit" `
-  -DllName         "Antigravity.DrawBeams.dll"
+.\skills\module-workflow\scripts\plan_lock.ps1 `
+  -Action create `
+  -RepositoryRoot "E:\AI_SOFTWARE_FACTORY" `
+  -ModuleRoot "src\Antigravity.DrawBeams" `
+  -ApprovalFile "src\Antigravity.DrawBeams\.ai-workflow\history\plan-review-run-001.json"
+
+.\skills\module-workflow\scripts\plan_lock.ps1 `
+  -Action verify `
+  -RepositoryRoot "E:\AI_SOFTWARE_FACTORY" `
+  -ModuleRoot "src\Antigravity.DrawBeams"
 ```
 
-## Invocation — Python directly
-
+### Evidence Gate CLI
 ```powershell
-python skills/module-workflow/scripts/module_bootstrap.py `
-  --repository-root "E:\AI_SOFTWARE_FACTORY" `
-  --module-root     "src/Antigravity.DrawBeams" `
-  --module-id       "antigravity.drawbeams" `
-  --module-name     "Antigravity.DrawBeams" `
-  --project-file    "src/Antigravity.DrawBeams/Antigravity.DrawBeams.csproj" `
-  --platform        "revit" `
-  --dll-name        "Antigravity.DrawBeams.dll"
+.\skills\module-workflow\scripts\evidence_gate.ps1 `
+  -Action collect `
+  -RepositoryRoot "E:\AI_SOFTWARE_FACTORY" `
+  -ModuleRoot "src\Antigravity.DrawBeams" `
+  -RequestFile "src\Antigravity.DrawBeams\.sandbox\evidence_request.json"
+
+.\skills\module-workflow\scripts\evidence_gate.ps1 `
+  -Action verify `
+  -RepositoryRoot "E:\AI_SOFTWARE_FACTORY" `
+  -ModuleRoot "src\Antigravity.DrawBeams"
 ```
 
-Append `--dry-run` to preview without writing.
+## Non-Goals & Governance
 
----
+- Plan review JSON is produced by Codex adapter in subsequent phases. Phase C does not auto-invoke Codex.
+- Evidence request is prepared by Antigravity. Evidence JSON is generated strictly by deterministic scripts.
+- `PLAN_LOCK.json` and READY `EVIDENCE.json` are immutable once created.
+- This skill has **not** been deployed into the production runtime manifest (`runtime_manifest.json`).
 
-## Idempotency
+## Exit Codes
 
-Running the tool a second time with the same inputs returns:
-
-```json
-{ "status": "NO_CHANGES", "reason_code": "BOOTSTRAP_ALREADY_CURRENT" }
-```
-
-No files are modified, no timestamps change, no `.gitignore` block is duplicated.
-
----
-
-## Output format
-
-Stdout is always a single JSON object. Do not mix with stderr diagnostics.
-
-```json
-{
-  "schema_version": 1,
-  "status": "CREATED | NO_CHANGES | DRY_RUN | FAILED",
-  "reason_code": "BOOTSTRAP_CREATED",
-  "repository_root": "E:/AI_SOFTWARE_FACTORY",
-  "module_root": "src/Antigravity.DrawBeams",
-  "branch": "task/drawbeams-init",
-  "dry_run": false,
-  "files_created": [...],
-  "files_preserved": [...],
-  "directories_created": [...],
-  "gitignore_updated": true,
-  "generated_contracts": [...]
-}
-```
-
----
-
-## Exit codes
-
-| Code | Meaning |
-|------|---------|
-| `0`  | `CREATED`, `NO_CHANGES`, or `DRY_RUN` |
-| `2`  | Context / input validation failure |
-| `3`  | Conflict with existing content |
-| `4`  | Write or rollback failure |
-
----
-
-## Reason codes
-
-| Code | Trigger |
-|------|---------|
-| `BOOTSTRAP_CREATED` | First run, files created successfully |
-| `BOOTSTRAP_ALREADY_CURRENT` | Rerun with same inputs, no changes needed |
-| `BOOTSTRAP_DRY_RUN` | `--dry-run` flag used |
-| `NOT_A_GIT_REPOSITORY` | `RepositoryRoot` is not a Git working tree |
-| `REPOSITORY_ROOT_MISMATCH` | Git root differs from `RepositoryRoot` |
-| `PROTECTED_BRANCH_BLOCKED` | Current branch is `main`, `master`, `develop`, or `release` |
-| `INVALID_RELATIVE_PATH` | A path argument is absolute, empty, or contains `..` |
-| `PATH_ESCAPES_REPOSITORY` | A path resolves outside the repository root |
-| `MODULE_ROOT_NOT_FOUND` | `ModuleRoot` directory does not exist |
-| `PROJECT_FILE_NOT_FOUND` | `ProjectFile` does not exist |
-| `PROJECT_FILE_OUTSIDE_MODULE` | `ProjectFile` is not inside `ModuleRoot` |
-| `INVALID_MODULE_ROOT` | `ModuleRoot` equals the repository root |
-| `INVALID_MODULE_ID` | `ModuleId` does not match `^[a-z0-9][a-z0-9._-]*$` |
-| `INVALID_WORKFLOW_VERSION` | `WorkflowVersion` does not match semantic version pattern |
-| `INVALID_DLL_NAME` | `DllName` is empty, contains a path separator, or does not end in `.dll` |
-| `CANONICAL_TEMPLATE_MISSING` | A required template file is absent from `templates/module-workflow/` |
-| `GITIGNORE_MANAGED_BLOCK_INVALID` | `BEGIN` marker found but `END` marker missing/malformed |
-| `BOOTSTRAP_CONFLICT` | Existing file content differs from generated output |
-| `BOOTSTRAP_WRITE_FAILED` | Write failed mid-run; partial output rolled back |
+- `0`: Success (`CREATED`, `READY`, `NO_CHANGES`, `DRY_RUN`, `VERIFIED`).
+- `2`: Context/input validation failure.
+- `3`: Immutable conflict (`PLAN_LOCK_CONFLICT`, `EVIDENCE_LOCKED`).
+- `4`: Write failure (`PLAN_LOCK_WRITE_FAILED`, `EVIDENCE_WRITE_FAILED`).
+- `5`: Integrity mismatch or insufficient evidence (`PLAN_LOCK_INVALID`, `INSUFFICIENT_EVIDENCE`, `EVIDENCE_STALE`, `SOURCE_SNAPSHOT_CHANGED`).

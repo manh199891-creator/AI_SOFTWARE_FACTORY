@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Plan Review Schema",
+  "type": "object",
+  "description": "Machine-readable output of Codex plan review used for Plan Lock",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "review_type": { "type": "string", "const": "PLAN" },
+    "task_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "module_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "review_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer": {
+      "type": "string",
+      "const": "codex"
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["APPROVED", "NEEDS_CHANGES", "REJECTED"]
+    },
+    "reviewed_branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "base_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{40}$"
+    },
+    "task_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
+    },
+    "scope_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
+    },
+    "plan_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "review_type",
+    "task_id",
+    "module_id",
+    "review_run_id",
+    "reviewer",
+    "decision",
+    "reviewed_branch",
+    "base_commit",
+    "task_sha256",
+    "scope_sha256",
+    "plan_sha256",
+    "reviewed_at",
+    "findings"
+  ],
+  "additionalProperties": false
+}

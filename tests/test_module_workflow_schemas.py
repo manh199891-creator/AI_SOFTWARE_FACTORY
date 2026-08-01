@@ -1,5 +1,5 @@
 """
-Module Workflow Schema Tests — Phase A
+Module Workflow Schema Tests — Phase C
 Tests for all schemas in schemas/module-workflow/ against examples.
 """
 import json
@@ -130,6 +130,8 @@ def test_all_schema_files_parse(schemas_dir: Path) -> None:
         "module.schema.json",
         "scope.schema.json",
         "plan_lock.schema.json",
+        "plan_review.schema.json",
+        "evidence_request.schema.json",
         "evidence.schema.json",
         "delivery.schema.json",
         "sandbox_manifest.schema.json",
@@ -171,7 +173,29 @@ def test_drawbeams_plan_lock_example_validates(schemas_dir: Path, examples_dir: 
     validate_schema_instance(schema, instance)
 
 
-def test_drawbeams_evidence_example_validates(schemas_dir: Path, examples_dir: Path) -> None:
+def test_plan_review_schema_parses(schemas_dir: Path) -> None:
+    schema = load_json(schemas_dir / "plan_review.schema.json")
+    Draft7Validator.check_schema(schema)
+
+
+def test_evidence_request_schema_parses(schemas_dir: Path) -> None:
+    schema = load_json(schemas_dir / "evidence_request.schema.json")
+    Draft7Validator.check_schema(schema)
+
+
+def test_drawbeams_plan_review_example_validates(schemas_dir: Path, examples_dir: Path) -> None:
+    schema = load_json(schemas_dir / "plan_review.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/history/plan-review-run-001.json")
+    validate_schema_instance(schema, instance)
+
+
+def test_drawbeams_evidence_request_example_validates(schemas_dir: Path, examples_dir: Path) -> None:
+    schema = load_json(schemas_dir / "evidence_request.schema.json")
+    instance = load_json(examples_dir / ".sandbox/evidence_request.json")
+    validate_schema_instance(schema, instance)
+
+
+def test_updated_drawbeams_evidence_validates(schemas_dir: Path, examples_dir: Path) -> None:
     schema = load_json(schemas_dir / "evidence.schema.json")
     instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
     validate_schema_instance(schema, instance)
@@ -205,7 +229,6 @@ def test_missing_task_id_rejected(schemas_dir: Path, examples_dir: Path) -> None
 
 
 def test_work_branch_main_rejected(schemas_dir: Path, examples_dir: Path) -> None:
-    """work_branch='main' must be rejected by schema (not enum)."""
     schema = load_json(schemas_dir / "scope.schema.json")
     instance = load_json(examples_dir / ".ai-workflow/SCOPE.json")
     instance["work_branch"] = "main"
@@ -214,7 +237,6 @@ def test_work_branch_main_rejected(schemas_dir: Path, examples_dir: Path) -> Non
 
 
 def test_work_branch_equal_base_branch_rejected(schemas_dir: Path, examples_dir: Path) -> None:
-    """work_branch == base_branch rejected by cross-field helper."""
     instance = load_json(examples_dir / ".ai-workflow/SCOPE.json")
     instance["work_branch"] = instance["base_branch"]
     with pytest.raises(ValueError):
@@ -254,7 +276,6 @@ def test_evidence_without_diagnosis_source_rejected(schemas_dir: Path, examples_
 
 
 def test_evidence_source_with_invalid_line_range_rejected(schemas_dir: Path, examples_dir: Path) -> None:
-    """line_end < line_start rejected by cross-field helper."""
     instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
     instance["diagnosis_sources"][0]["line_start"] = 10
     instance["diagnosis_sources"][0]["line_end"] = 5
@@ -263,7 +284,6 @@ def test_evidence_source_with_invalid_line_range_rejected(schemas_dir: Path, exa
 
 
 def test_ready_evidence_referencing_missing_file_rejected(schemas_dir: Path, examples_dir: Path) -> None:
-    """ready_to_implement=true with exists=false rejected by cross-field helper."""
     instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
     instance["ready_to_implement"] = True
     instance["files_verified"][0]["exists"] = False
@@ -352,7 +372,6 @@ def test_built_at_invalid_datetime_rejected(schemas_dir: Path, examples_dir: Pat
 
 
 def test_absolute_shared_dependency_rejected(schemas_dir: Path, examples_dir: Path) -> None:
-    """shared_dependencies with absolute path must be rejected by schema."""
     schema = load_json(schemas_dir / "module.schema.json")
     instance = load_json(examples_dir / ".ai-workflow/MODULE.json")
     instance["shared_dependencies"] = ["E:/some/absolute/path.dll"]
@@ -361,7 +380,6 @@ def test_absolute_shared_dependency_rejected(schemas_dir: Path, examples_dir: Pa
 
 
 def test_absolute_scope_allowed_path_rejected(schemas_dir: Path, examples_dir: Path) -> None:
-    """allowed_paths with absolute path must be rejected by schema."""
     schema = load_json(schemas_dir / "scope.schema.json")
     instance = load_json(examples_dir / ".ai-workflow/SCOPE.json")
     instance["allowed_paths"] = ["E:/AI_SOFTWARE_FACTORY/src/**"]
@@ -370,7 +388,6 @@ def test_absolute_scope_allowed_path_rejected(schemas_dir: Path, examples_dir: P
 
 
 def test_absolute_repository_root_rejected(schemas_dir: Path, examples_dir: Path) -> None:
-    """repository_root with absolute path must be rejected by schema."""
     schema = load_json(schemas_dir / "evidence.schema.json")
     instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
     instance["repository_root"] = "E:/AI_SOFTWARE_FACTORY"
@@ -379,9 +396,58 @@ def test_absolute_repository_root_rejected(schemas_dir: Path, examples_dir: Path
 
 
 def test_absolute_diagnosis_source_path_rejected(schemas_dir: Path, examples_dir: Path) -> None:
-    """diagnosis_sources[].path with absolute path must be rejected by schema."""
     schema = load_json(schemas_dir / "evidence.schema.json")
     instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
     instance["diagnosis_sources"][0]["path"] = "E:/AI_SOFTWARE_FACTORY/src/Antigravity.DrawBeams/CreateBeamCommand.cs"
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+# --- Phase C New Schema Tests ---
+
+def test_plan_review_non_codex_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    schema = load_json(schemas_dir / "plan_review.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/history/plan-review-run-001.json")
+    instance["reviewer"] = "antigravity"
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+def test_plan_review_invalid_decision_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    schema = load_json(schemas_dir / "plan_review.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/history/plan-review-run-001.json")
+    instance["decision"] = "INVALID"
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+def test_evidence_request_absolute_path_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    schema = load_json(schemas_dir / "evidence_request.schema.json")
+    instance = load_json(examples_dir / ".sandbox/evidence_request.json")
+    instance["files_to_verify"] = ["E:/absolute/path.cs"]
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+def test_evidence_request_parent_traversal_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    schema = load_json(schemas_dir / "evidence_request.schema.json")
+    instance = load_json(examples_dir / ".sandbox/evidence_request.json")
+    instance["files_to_verify"] = ["../outside.cs"]
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+def test_evidence_missing_snapshot_hash_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    schema = load_json(schemas_dir / "evidence.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    del instance["source_snapshot_sha256"]
+    with pytest.raises(ValidationError):
+        validate_schema_instance(schema, instance)
+
+
+def test_evidence_diagnosis_source_missing_hash_rejected(schemas_dir: Path, examples_dir: Path) -> None:
+    schema = load_json(schemas_dir / "evidence.schema.json")
+    instance = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    del instance["diagnosis_sources"][0]["excerpt_sha256"]
     with pytest.raises(ValidationError):
         validate_schema_instance(schema, instance)

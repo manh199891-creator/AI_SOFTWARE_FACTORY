@@ -5,20 +5,25 @@
   "repository_root": ".",
   "branch": "task/drawbeams-fix-corridor",
   "base_commit": "1111111111111111111111111111111111111111",
-  "task_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "scope_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  "plan_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "task_sha256": "ca247d8f188f899a6c0bf1f64f649bc100900697987ad086a7ee1052e6274fa6",
+  "scope_sha256": "ee718823062238ee73ab3abecb675893b8a46367993e9ccecdaf077828f89783",
+  "plan_sha256": "4a838cd929b0f927edb3b9af9a2f86c6d303af0189c1c74a2c1b8c2cc7f3fb83",
+  "plan_lock_sha256": "5f21c96d37d024d1362aadcb0be9739c1df5603f553b59cc0e34834bea21ffb1",
+  "source_snapshot_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "generated_at": "2026-08-01T02:30:00Z",
   "files_verified": [
     {
       "path": "src/Antigravity.DrawBeams/CreateBeamCommand.cs",
       "exists": true,
-      "evidence_command": "git ls-files --error-unmatch src/Antigravity.DrawBeams/CreateBeamCommand.cs"
+      "tracked": true,
+      "file_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "evidence_command": "git ls-files --error-unmatch -- src/Antigravity.DrawBeams/CreateBeamCommand.cs"
     }
   ],
   "symbols_verified": [
     {
       "symbol": "CreateBeamCommand",
-      "evidence_command": "git grep -n \"CreateBeamCommand\"",
+      "evidence_command": "literal tracked-file search: CreateBeamCommand",
       "matches": [
         "src/Antigravity.DrawBeams/CreateBeamCommand.cs:10"
       ]
@@ -30,7 +35,9 @@
       "path": "src/Antigravity.DrawBeams/CreateBeamCommand.cs",
       "line_start": 20,
       "line_end": 35,
-      "reason": "Input is used without the required validation."
+      "reason": "Input is used without the required validation.",
+      "file_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "excerpt_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
     }
   ],
   "ready_to_implement": true

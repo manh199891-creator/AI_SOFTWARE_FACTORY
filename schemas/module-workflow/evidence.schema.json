@@ -21,6 +21,9 @@
     "task_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "scope_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "plan_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "plan_lock_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source_snapshot_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "generated_at": { "type": "string", "format": "date-time" },
     "files_verified": {
       "type": "array",
       "items": {
@@ -31,9 +34,11 @@
             "pattern": "^(?!/)(?!.*\\.\\.)(?!.*:)[^/].*"
           },
           "exists": { "type": "boolean" },
+          "tracked": { "type": "boolean" },
+          "file_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
           "evidence_command": { "type": "string", "minLength": 1 }
         },
-        "required": ["path", "exists", "evidence_command"],
+        "required": ["path", "exists", "tracked", "evidence_command"],
         "additionalProperties": false
       },
       "minItems": 1
@@ -67,9 +72,11 @@
           },
           "line_start": { "type": "integer", "minimum": 1 },
           "line_end": { "type": "integer", "minimum": 1 },
-          "reason": { "type": "string", "minLength": 1 }
+          "reason": { "type": "string", "minLength": 1 },
+          "file_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "excerpt_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
         },
-        "required": ["path", "line_start", "line_end", "reason"],
+        "required": ["path", "line_start", "line_end", "reason", "file_sha256", "excerpt_sha256"],
         "additionalProperties": false
       },
       "minItems": 1
@@ -86,6 +93,9 @@
     "task_sha256",
     "scope_sha256",
     "plan_sha256",
+    "plan_lock_sha256",
+    "source_snapshot_sha256",
+    "generated_at",
     "files_verified",
     "symbols_verified",
     "diagnosis",
