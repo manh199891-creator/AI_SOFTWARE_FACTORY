@@ -1451,15 +1451,17 @@ def test_shared_dependency_is_in_source_snapshot(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "shared/SharedUtil.cs"], cwd=repo, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "add shared dependency"], cwd=repo, check=True, capture_output=True)
 
+    head_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
     scope_p = mod_dir / ".ai-workflow" / "SCOPE.json"
     s_data = json.loads(scope_p.read_text(encoding="utf-8"))
     s_data["allowed_paths"].append("shared/**")
+    s_data["base_commit"] = head_commit
     scope_p.write_text(json.dumps(s_data), encoding="utf-8")
 
     # Update PLAN_LOCK to match updated SCOPE
     ai_dir = mod_dir / ".ai-workflow"
     app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
-    head_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
+
     approval_data = {
         "schema_version": 1,
         "review_type": "PLAN",
