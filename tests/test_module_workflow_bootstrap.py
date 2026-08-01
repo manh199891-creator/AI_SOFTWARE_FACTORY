@@ -7,9 +7,11 @@ AI_SOFTWARE_FACTORY repository or any production module.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -498,8 +500,18 @@ def test_preexisting_files_are_never_deleted_during_rollback(tmp_path: Path) -> 
 
 
 # ---------------------------------------------------------------------------
-# Rollback restore tests (new for NEEDS_FIX)
+# Rollback restore tests — direct BootstrapWriter unit tests
 # ---------------------------------------------------------------------------
+
+
+def _load_bootstrap_module():
+    """Import module_bootstrap.py via importlib for direct function/class access."""
+    spec = importlib.util.spec_from_file_location(
+        "module_bootstrap", str(BOOTSTRAP_SCRIPT)
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _make_temp_template_root(tmp_path: Path) -> Path:
@@ -514,7 +526,6 @@ def _make_temp_template_root(tmp_path: Path) -> Path:
     tmpl_dest.mkdir(parents=True)
 
     # Copy all templates from the real location
-    import shutil
     for item in real_tmpl.rglob("*"):
         if item.is_file():
             rel = item.relative_to(real_tmpl)
@@ -525,131 +536,122 @@ def _make_temp_template_root(tmp_path: Path) -> Path:
     return factory
 
 
-def _run_bootstrap_with_template_root(
-    repo: Path,
-    template_root: Path,
-    *extra_args: str,
-    module_rel: str = "src/Sample.DrawBeams",
-    csproj_rel: str = "src/Sample.DrawBeams/Sample.DrawBeams.csproj",
-    module_id: str = "sample.drawbeams",
-    module_name: str = "Sample.DrawBeams",
-    platform_: str = "revit",
-) -> subprocess.CompletedProcess:
-    args = [
-        sys.executable, str(BOOTSTRAP_SCRIPT),
-        "--repository-root", str(repo),
-        "--module-root", module_rel,
-        "--module-id", module_id,
-        "--module-name", module_name,
-        "--project-file", csproj_rel,
-        "--platform", platform_,
-        "--template-root", str(template_root),
-        *extra_args,
-    ]
-    return subprocess.run(args, capture_output=True, text=True)
+def test_writer_rollback_restores_modified_file_bytes(tmp_path: Path) -> None:
+    """BootstrapWriter.rollback() restores overwritten file to original bytes."""
+    mod = _load_bootstrap_module()
+    writer = mod.BootstrapWriter()
+
+    # Create pre-existing .gitignore with known bytes
+    gitignore = tmp_path / ".gitignore"
+    original_bytes = b"# Custom rule\n*.user\n"
+    gitignore.write_bytes(original_bytes)
+
+    # Overwrite it via writer
+    writer.overwrite_existing_file(gitignore, "# Changed content\nbin/\nobj/\n")
+
+    # Verify file was actually changed
+    assert gitignore.read_bytes() != original_bytes
+
+    # Rollback must restore byte-for-byte
+    writer.rollback()
+    assert gitignore.read_bytes() == original_bytes
 
 
-def test_rollback_restores_preexisting_gitignore(tmp_path: Path) -> None:
-    """
-    If a .gitignore pre-exists and gets updated, but a subsequent write fails,
-    rollback must restore the .gitignore to its original bytes exactly.
-    """
-    repo, module_abs, _ = init_temp_repo(tmp_path)
-    # Pre-existing .gitignore with custom content
-    original_gitignore = "# Custom rule\n*.user\n"
-    (module_abs / ".gitignore").write_text(original_gitignore, encoding="utf-8")
-    # Block .sandbox to force write failure after .gitignore is updated
-    (module_abs / ".sandbox").write_text("blocker", encoding="utf-8")
-    result = run_bootstrap(repo)
-    assert result.returncode == 4
-    out = parse_stdout(result)
-    assert out["reason_code"] == "BOOTSTRAP_WRITE_FAILED"
-    # .gitignore must be restored to exact original bytes
-    restored = (module_abs / ".gitignore").read_text(encoding="utf-8")
-    assert restored == original_gitignore, (
-        f"Expected original .gitignore content, got: {restored!r}"
-    )
-
-
-def test_rollback_removes_only_run_created_files(tmp_path: Path) -> None:
+def test_writer_rollback_removes_created_artifacts_only(tmp_path: Path) -> None:
     """
     After rollback:
-    - Newly created workflow files must be deleted.
-    - Pre-existing source file must NOT be deleted.
-    - New empty directories must be removed.
-    - Pre-existing files and dirs must be untouched.
+    - new_file is deleted
+    - new_directory is deleted (if empty after file removal)
+    - pre-existing source file is untouched
+    - pre-existing directory is untouched
+    - pre-existing .gitignore is restored byte-for-byte
     """
-    repo, module_abs, _ = init_temp_repo(tmp_path)
-    pre_existing_src = module_abs / "MyClass.cs"
-    pre_existing_src.write_text("// existing\n", encoding="utf-8")
-    # Pre-create .ai-workflow dir so it counts as pre-existing
-    ai_wf = module_abs / ".ai-workflow"
-    ai_wf.mkdir()
-    pre_existing_note = ai_wf / "NOTES.txt"
-    pre_existing_note.write_text("pre-existing note\n", encoding="utf-8")
-    # Block .sandbox to trigger rollback
-    (module_abs / ".sandbox").write_text("blocker", encoding="utf-8")
-    result = run_bootstrap(repo)
-    assert result.returncode == 4
-    # Pre-existing source file untouched
-    assert pre_existing_src.exists()
-    assert pre_existing_src.read_text(encoding="utf-8") == "// existing\n"
-    # Pre-existing note untouched
-    assert pre_existing_note.exists()
-    assert pre_existing_note.read_text(encoding="utf-8") == "pre-existing note\n"
-    # No workflow JSON files left behind
-    assert not (ai_wf / "MODULE.json").exists()
-    assert not (ai_wf / "SCOPE.json").exists()
+    mod = _load_bootstrap_module()
+    writer = mod.BootstrapWriter()
+
+    # Pre-existing items
+    pre_src = tmp_path / "MyClass.cs"
+    pre_src.write_text("// existing source\n", encoding="utf-8")
+    pre_dir = tmp_path / "existing_dir"
+    pre_dir.mkdir()
+    gitignore = tmp_path / ".gitignore"
+    original_bytes = b"# original gitignore\n"
+    gitignore.write_bytes(original_bytes)
+
+    # Create new artifacts via writer
+    new_dir = tmp_path / "new_dir"
+    writer.mkdir(new_dir)
+    new_file = new_dir / "new_file.txt"
+    writer.write_new_file(new_file, "new content")
+    writer.overwrite_existing_file(gitignore, "# changed\n")
+
+    # Verify artifacts were created / modified
+    assert new_file.exists()
+    assert new_dir.exists()
+    assert gitignore.read_bytes() != original_bytes
+
+    # Rollback
+    writer.rollback()
+
+    # new_file must be deleted
+    assert not new_file.exists()
+    # new_directory must be deleted (empty after file removal)
+    assert not new_dir.exists()
+    # pre-existing source file untouched
+    assert pre_src.exists()
+    assert pre_src.read_text(encoding="utf-8") == "// existing source\n"
+    # pre-existing directory untouched
+    assert pre_dir.exists()
+    # pre-existing .gitignore restored byte-for-byte
+    assert gitignore.read_bytes() == original_bytes
 
 
 # ---------------------------------------------------------------------------
-# Canonical template completeness tests
+# Canonical template completeness tests (importlib + capsys)
 # ---------------------------------------------------------------------------
 
 
-def test_missing_canonical_module_template_rejected(tmp_path: Path) -> None:
+def test_missing_canonical_module_template_rejected(tmp_path: Path, capsys) -> None:
     """Missing MODULE.json template file must cause CANONICAL_TEMPLATE_MISSING."""
-    repo, _, _ = init_temp_repo(tmp_path)
+    mod = _load_bootstrap_module()
     tmpl_root = _make_temp_template_root(tmp_path / "t1")
     # Remove MODULE.json template
     module_tmpl = tmpl_root / "templates" / "module-workflow" / ".ai-workflow" / "MODULE.json"
     module_tmpl.unlink()
-    result = _run_bootstrap_with_template_root(repo, tmpl_root)
-    assert result.returncode == 2, result.stderr
-    out = parse_stdout(result)
+    with pytest.raises(SystemExit) as exc_info:
+        mod.validate_canonical_templates(tmpl_root)
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    out = json.loads(captured.out)
     assert out["reason_code"] == "CANONICAL_TEMPLATE_MISSING"
-    # No files written
-    module_abs = repo / "src" / "Sample.DrawBeams"
-    assert not (module_abs / ".ai-workflow").exists()
-    assert not (module_abs / ".sandbox").exists()
 
 
-def test_missing_canonical_scope_template_rejected(tmp_path: Path) -> None:
+def test_missing_canonical_scope_template_rejected(tmp_path: Path, capsys) -> None:
     """Missing SCOPE.json template file must cause CANONICAL_TEMPLATE_MISSING."""
-    repo, _, _ = init_temp_repo(tmp_path)
+    mod = _load_bootstrap_module()
     tmpl_root = _make_temp_template_root(tmp_path / "t2")
     scope_tmpl = tmpl_root / "templates" / "module-workflow" / ".ai-workflow" / "SCOPE.json"
     scope_tmpl.unlink()
-    result = _run_bootstrap_with_template_root(repo, tmpl_root)
-    assert result.returncode == 2, result.stderr
-    out = parse_stdout(result)
+    with pytest.raises(SystemExit) as exc_info:
+        mod.validate_canonical_templates(tmpl_root)
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    out = json.loads(captured.out)
     assert out["reason_code"] == "CANONICAL_TEMPLATE_MISSING"
-    module_abs = repo / "src" / "Sample.DrawBeams"
-    assert not (module_abs / ".ai-workflow").exists()
 
 
-def test_invalid_canonical_json_template_rejected(tmp_path: Path) -> None:
+def test_invalid_canonical_json_template_rejected(tmp_path: Path, capsys) -> None:
     """Unparseable JSON in canonical template must cause CANONICAL_TEMPLATE_MISSING."""
-    repo, _, _ = init_temp_repo(tmp_path)
+    mod = _load_bootstrap_module()
     tmpl_root = _make_temp_template_root(tmp_path / "t3")
     module_tmpl = tmpl_root / "templates" / "module-workflow" / ".ai-workflow" / "MODULE.json"
     module_tmpl.write_text("{ INVALID JSON !!!", encoding="utf-8")
-    result = _run_bootstrap_with_template_root(repo, tmpl_root)
-    assert result.returncode == 2, result.stderr
-    out = parse_stdout(result)
+    with pytest.raises(SystemExit) as exc_info:
+        mod.validate_canonical_templates(tmpl_root)
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    out = json.loads(captured.out)
     assert out["reason_code"] == "CANONICAL_TEMPLATE_MISSING"
-    module_abs = repo / "src" / "Sample.DrawBeams"
-    assert not (module_abs / ".ai-workflow").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -702,6 +704,51 @@ def test_duplicate_end_marker_rejected(tmp_path: Path) -> None:
     out = parse_stdout(result)
     assert out["reason_code"] == "GITIGNORE_MANAGED_BLOCK_INVALID"
     assert not (module_abs / ".ai-workflow").exists()
+
+
+# ---------------------------------------------------------------------------
+# Dry-run output tests — gitignore semantics
+# ---------------------------------------------------------------------------
+
+
+def test_dry_run_existing_gitignore_not_reported_as_created(tmp_path: Path) -> None:
+    """
+    When .gitignore already exists and will be updated, dry-run must report
+    gitignore_updated=true but NOT include .gitignore in files_created.
+    Semantics must match the real run.
+    """
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    # Pre-existing .gitignore — will be updated (managed block appended)
+    (module_abs / ".gitignore").write_text("# existing rules\n*.user\n", encoding="utf-8")
+    result = run_bootstrap(repo, "--dry-run")
+    assert result.returncode == 0
+    out = parse_stdout(result)
+    assert out["status"] == "DRY_RUN"
+    assert out["gitignore_updated"] is True
+    # .gitignore must NOT be in files_created (it pre-existed)
+    gitignore_rel = str((module_abs / ".gitignore").relative_to(repo))
+    assert gitignore_rel not in out["files_created"], (
+        f".gitignore pre-existed; must not appear in files_created: {out['files_created']}"
+    )
+
+
+def test_dry_run_new_gitignore_reported_as_created(tmp_path: Path) -> None:
+    """
+    When .gitignore does NOT exist, dry-run must include it in files_created.
+    Semantics must match the real run.
+    """
+    repo, module_abs, _ = init_temp_repo(tmp_path)
+    # No pre-existing .gitignore
+    assert not (module_abs / ".gitignore").exists()
+    result = run_bootstrap(repo, "--dry-run")
+    assert result.returncode == 0
+    out = parse_stdout(result)
+    assert out["status"] == "DRY_RUN"
+    # .gitignore must be in files_created (it's new)
+    gitignore_rel = str((module_abs / ".gitignore").relative_to(repo))
+    assert gitignore_rel in out["files_created"], (
+        f"New .gitignore must appear in files_created: {out['files_created']}"
+    )
 
 
 # ---------------------------------------------------------------------------

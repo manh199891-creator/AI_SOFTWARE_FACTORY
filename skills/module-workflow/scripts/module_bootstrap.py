@@ -576,13 +576,10 @@ def bootstrap(args: argparse.Namespace) -> None:
     # ------------------------------------------------------------------
     # 5. Locate and validate canonical templates (all must exist + JSON must parse)
     # ------------------------------------------------------------------
-    if args.template_root:
-        tmpl_root = Path(args.template_root).resolve()
-    else:
-        try:
-            tmpl_root = find_template_root(script_path)
-        except FileNotFoundError as e:
-            fail("CANONICAL_TEMPLATE_MISSING", str(e))
+    try:
+        tmpl_root = find_template_root(script_path)
+    except FileNotFoundError as e:
+        fail("CANONICAL_TEMPLATE_MISSING", str(e))
 
     validate_canonical_templates(tmpl_root)
 
@@ -681,12 +678,14 @@ def bootstrap(args: argparse.Namespace) -> None:
     # ------------------------------------------------------------------
     # 9. Dry run — report and exit
     # ------------------------------------------------------------------
-    # Determine dry-run gitignore label
-    dry_gitignore_files = []
-    if gitignore_updated:
-        dry_gitignore_files = [str(gitignore_path.relative_to(repo_abs))]
-
     if dry_run:
+        # .gitignore semantics must match real run:
+        #   - new .gitignore  → files_created
+        #   - existing .gitignore updated → gitignore_updated only, NOT files_created
+        dry_files_created = [str(p.relative_to(repo_abs)) for p in files_to_create]
+        if gitignore_updated and not gitignore_preexisted:
+            dry_files_created.append(str(gitignore_path.relative_to(repo_abs)))
+
         result = make_output(
             status="DRY_RUN",
             reason_code="BOOTSTRAP_DRY_RUN",
@@ -694,7 +693,7 @@ def bootstrap(args: argparse.Namespace) -> None:
             module_root=module_root_rel,
             branch=branch,
             dry_run=True,
-            files_created=[str(p.relative_to(repo_abs)) for p in files_to_create] + dry_gitignore_files,
+            files_created=dry_files_created,
             files_preserved=files_preserved,
             directories_created=[str(d.relative_to(repo_abs)) for d in dirs_to_create],
             gitignore_updated=gitignore_updated,
@@ -823,7 +822,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Repository-relative shared dependency path (repeatable).")
     p.add_argument("--workflow-version", default="1.0.0", help="Semantic version (default: 1.0.0).")
     p.add_argument("--dry-run", action="store_true", help="Preview mode — no files written.")
-    p.add_argument("--template-root", default="", help=argparse.SUPPRESS)  # test-only override
+
     return p
 
 
