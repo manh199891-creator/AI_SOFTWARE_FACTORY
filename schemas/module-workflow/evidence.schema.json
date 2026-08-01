@@ -24,7 +24,9 @@
     "plan_sha256": { "type": "string", "pattern": "^(?:[a-f0-9]{64})?$" },
     "plan_lock_sha256": { "type": "string", "pattern": "^(?:[a-f0-9]{64})?$" },
     "source_snapshot_sha256": { "type": "string", "pattern": "^(?:[a-f0-9]{64})?$" },
+    "generated_at": { "type": "string" },
     "ready_to_implement": { "type": "boolean" },
+
     "files_checked": { "type": "integer", "minimum": 0 },
     "symbols_checked": { "type": "integer", "minimum": 0 },
     "diagnosis_sources_checked": { "type": "integer", "minimum": 0 },
