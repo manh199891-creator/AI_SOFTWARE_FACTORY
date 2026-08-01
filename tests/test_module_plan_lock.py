@@ -1311,3 +1311,253 @@ def test_plan_lock_rejects_approval_symlink_escape(tmp_path: Path) -> None:
     assert res.returncode == 2
     out = json.loads(res.stdout)
     assert out["reason_code"] == "PLAN_REVIEW_PATH_INVALID"
+
+
+def test_verify_rejects_deleted_approval(tmp_path: Path) -> None:
+    repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
+    ai_dir = mod_dir / ".ai-workflow"
+    app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
+
+    approval_data = {
+        "schema_version": 1,
+        "review_type": "PLAN",
+        "task_id": "drawbeams-fix-corridor",
+        "module_id": "antigravity-drawbeams",
+        "review_run_id": "plan-review-run-001",
+        "reviewer": "codex",
+        "decision": "APPROVED",
+        "reviewed_branch": "task/drawbeams-fix-corridor",
+        "base_commit": base_commit,
+        "task_sha256": hash_task_file(ai_dir / "TASK.md"),
+        "scope_sha256": hash_scope_file(ai_dir / "SCOPE.json"),
+        "plan_sha256": hash_plan_file(ai_dir / "PLAN.md"),
+        "reviewed_at": "2026-08-01T02:00:00Z",
+        "findings": []
+    }
+    app_file = repo / app_rel
+    app_file.parent.mkdir(parents=True, exist_ok=True)
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+
+    res_create = run_plan_lock(repo, "create", "--approval-file", app_rel)
+    assert res_create.returncode == 0
+
+    app_file.unlink()
+
+    res = run_plan_lock(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "PLAN_LOCK_INVALID"
+
+
+def test_verify_rejects_changed_approval(tmp_path: Path) -> None:
+    repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
+    ai_dir = mod_dir / ".ai-workflow"
+    app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
+
+    approval_data = {
+        "schema_version": 1,
+        "review_type": "PLAN",
+        "task_id": "drawbeams-fix-corridor",
+        "module_id": "antigravity-drawbeams",
+        "review_run_id": "plan-review-run-001",
+        "reviewer": "codex",
+        "decision": "APPROVED",
+        "reviewed_branch": "task/drawbeams-fix-corridor",
+        "base_commit": base_commit,
+        "task_sha256": hash_task_file(ai_dir / "TASK.md"),
+        "scope_sha256": hash_scope_file(ai_dir / "SCOPE.json"),
+        "plan_sha256": hash_plan_file(ai_dir / "PLAN.md"),
+        "reviewed_at": "2026-08-01T02:00:00Z",
+        "findings": []
+    }
+    app_file = repo / app_rel
+    app_file.parent.mkdir(parents=True, exist_ok=True)
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+
+    run_plan_lock(repo, "create", "--approval-file", app_rel)
+
+    approval_data["reviewed_at"] = "2026-08-01T03:00:00Z"
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+
+    res = run_plan_lock(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "PLAN_LOCK_INVALID"
+
+
+def test_verify_rejects_approval_path_outside_history(tmp_path: Path) -> None:
+    repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
+    ai_dir = mod_dir / ".ai-workflow"
+    app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
+
+    approval_data = {
+        "schema_version": 1,
+        "review_type": "PLAN",
+        "task_id": "drawbeams-fix-corridor",
+        "module_id": "antigravity-drawbeams",
+        "review_run_id": "plan-review-run-001",
+        "reviewer": "codex",
+        "decision": "APPROVED",
+        "reviewed_branch": "task/drawbeams-fix-corridor",
+        "base_commit": base_commit,
+        "task_sha256": hash_task_file(ai_dir / "TASK.md"),
+        "scope_sha256": hash_scope_file(ai_dir / "SCOPE.json"),
+        "plan_sha256": hash_plan_file(ai_dir / "PLAN.md"),
+        "reviewed_at": "2026-08-01T02:00:00Z",
+        "findings": []
+    }
+    app_file = repo / app_rel
+    app_file.parent.mkdir(parents=True, exist_ok=True)
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+
+    run_plan_lock(repo, "create", "--approval-file", app_rel)
+
+    lock_p = ai_dir / "PLAN_LOCK.json"
+    lock_data = json.loads(lock_p.read_text(encoding="utf-8"))
+    lock_data["approval_file"] = "src/Antigravity.DrawBeams/.ai-workflow/PLAN.md"
+    lock_p.write_text(json.dumps(lock_data), encoding="utf-8")
+
+    res = run_plan_lock(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "PLAN_LOCK_INVALID"
+
+
+def test_verify_rejects_approval_review_id_mismatch(tmp_path: Path) -> None:
+    repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
+    ai_dir = mod_dir / ".ai-workflow"
+    app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
+
+    approval_data = {
+        "schema_version": 1,
+        "review_type": "PLAN",
+        "task_id": "drawbeams-fix-corridor",
+        "module_id": "antigravity-drawbeams",
+        "review_run_id": "plan-review-run-001",
+        "reviewer": "codex",
+        "decision": "APPROVED",
+        "reviewed_branch": "task/drawbeams-fix-corridor",
+        "base_commit": base_commit,
+        "task_sha256": hash_task_file(ai_dir / "TASK.md"),
+        "scope_sha256": hash_scope_file(ai_dir / "SCOPE.json"),
+        "plan_sha256": hash_plan_file(ai_dir / "PLAN.md"),
+        "reviewed_at": "2026-08-01T02:00:00Z",
+        "findings": []
+    }
+    app_file = repo / app_rel
+    app_file.parent.mkdir(parents=True, exist_ok=True)
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+
+    run_plan_lock(repo, "create", "--approval-file", app_rel)
+
+    lock_p = ai_dir / "PLAN_LOCK.json"
+    lock_data = json.loads(lock_p.read_text(encoding="utf-8"))
+    lock_data["approved_review_run"] = "plan-review-run-999"
+    lock_p.write_text(json.dumps(lock_data), encoding="utf-8")
+
+    res = run_plan_lock(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "PLAN_LOCK_INVALID"
+
+
+def test_verify_rejects_approval_decision_mismatch(tmp_path: Path) -> None:
+    repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
+    ai_dir = mod_dir / ".ai-workflow"
+    app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
+
+    approval_data = {
+        "schema_version": 1,
+        "review_type": "PLAN",
+        "task_id": "drawbeams-fix-corridor",
+        "module_id": "antigravity-drawbeams",
+        "review_run_id": "plan-review-run-001",
+        "reviewer": "codex",
+        "decision": "APPROVED",
+        "reviewed_branch": "task/drawbeams-fix-corridor",
+        "base_commit": base_commit,
+        "task_sha256": hash_task_file(ai_dir / "TASK.md"),
+        "scope_sha256": hash_scope_file(ai_dir / "SCOPE.json"),
+        "plan_sha256": hash_plan_file(ai_dir / "PLAN.md"),
+        "reviewed_at": "2026-08-01T02:00:00Z",
+        "findings": []
+    }
+    app_file = repo / app_rel
+    app_file.parent.mkdir(parents=True, exist_ok=True)
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+
+    run_plan_lock(repo, "create", "--approval-file", app_rel)
+
+    approval_data["decision"] = "REJECTED"
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+    app_hash = hashlib.sha256(json.dumps(approval_data, indent=2).encode("utf-8")).hexdigest()
+
+    lock_p = ai_dir / "PLAN_LOCK.json"
+    lock_data = json.loads(lock_p.read_text(encoding="utf-8"))
+    lock_data["approval_sha256"] = app_hash
+    lock_p.write_text(json.dumps(lock_data), encoding="utf-8")
+
+    res = run_plan_lock(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "PLAN_LOCK_INVALID"
+
+
+def test_verify_rejects_approval_symlink_escape(tmp_path: Path) -> None:
+    repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
+    ai_dir = mod_dir / ".ai-workflow"
+    app_rel = "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json"
+
+    approval_data = {
+        "schema_version": 1,
+        "review_type": "PLAN",
+        "task_id": "drawbeams-fix-corridor",
+        "module_id": "antigravity-drawbeams",
+        "review_run_id": "plan-review-run-001",
+        "reviewer": "codex",
+        "decision": "APPROVED",
+        "reviewed_branch": "task/drawbeams-fix-corridor",
+        "base_commit": base_commit,
+        "task_sha256": hash_task_file(ai_dir / "TASK.md"),
+        "scope_sha256": hash_scope_file(ai_dir / "SCOPE.json"),
+        "plan_sha256": hash_plan_file(ai_dir / "PLAN.md"),
+        "reviewed_at": "2026-08-01T02:00:00Z",
+        "findings": []
+    }
+    app_file = repo / app_rel
+    app_file.parent.mkdir(parents=True, exist_ok=True)
+    app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+
+    run_plan_lock(repo, "create", "--approval-file", app_rel)
+
+    outside_file = tmp_path / "outside_app.json"
+    outside_file.write_text(json.dumps(approval_data), encoding="utf-8")
+
+    link_path = ai_dir / "history" / "escaped_link.json"
+    try:
+        os.symlink(outside_file, link_path)
+    except OSError:
+        pytest.skip("Symlink creation unavailable")
+
+    lock_p = ai_dir / "PLAN_LOCK.json"
+    lock_data = json.loads(lock_p.read_text(encoding="utf-8"))
+    lock_data["approval_file"] = "src/Antigravity.DrawBeams/.ai-workflow/history/escaped_link.json"
+    lock_p.write_text(json.dumps(lock_data), encoding="utf-8")
+
+    res = run_plan_lock(repo, "verify")
+    assert res.returncode == 5
+    out = json.loads(res.stdout)
+    assert out["reason_code"] == "PLAN_LOCK_INVALID"
+
+
+def test_plan_lock_nul_path_rejected(tmp_path: Path) -> None:
+    repo, mod_dir, base_commit = init_test_module_repo(tmp_path)
+    res_mod = run_plan_lock(repo, "verify", "--module-root", "src/Antigravity.DrawBeams\x00invalid")
+    assert res_mod.returncode == 2
+    out_mod = json.loads(res_mod.stdout)
+    assert out_mod["reason_code"] == "INVALID_MODULE_ROOT"
+
+    res_app = run_plan_lock(repo, "create", "--approval-file", "src/Antigravity.DrawBeams/.ai-workflow/history/app\x00.json")
+    assert res_app.returncode == 2
+    out_app = json.loads(res_app.stdout)
+    assert out_app["reason_code"] == "PLAN_REVIEW_PATH_INVALID"

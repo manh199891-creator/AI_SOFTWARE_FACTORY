@@ -457,6 +457,12 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    if "\x00" in args.module_root:
+        fail(2, make_result(args.action, "FAILED", "INVALID_MODULE_ROOT"), "Module root contains NUL byte")
+
+    if args.approval_file and "\x00" in args.approval_file:
+        fail(2, make_result(args.action, "FAILED", "PLAN_REVIEW_PATH_INVALID"), "Approval file contains NUL byte")
+
     repo_root = validate_repository_root(Path(args.repository_root), Path.cwd())
     if not repo_root:
         fail(2, make_result(args.action, "FAILED", "NOT_A_GIT_REPOSITORY"), "Invalid repository root or not a Git repository")
@@ -470,4 +476,70 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except ContractValidationError as exc:
+        res = {
+            "schema_version": 1,
+            "action": "unknown",
+            "status": "FAILED",
+            "reason_code": "PLAN_LOCK_INVALID",
+            "repository_root": ".",
+            "module_root": "",
+            "branch": "",
+            "task_id": "",
+            "task_sha256": "",
+            "scope_sha256": "",
+            "plan_sha256": "",
+            "plan_lock_sha256": "",
+            "approval_review_run": "",
+            "dry_run": False,
+            "files_created": [],
+        }
+        print(f"[ERROR] PLAN_LOCK_INVALID: {exc}", file=sys.stderr)
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        sys.exit(5)
+    except PathContainmentError as exc:
+        res = {
+            "schema_version": 1,
+            "action": "unknown",
+            "status": "FAILED",
+            "reason_code": "PLAN_REVIEW_PATH_INVALID",
+            "repository_root": ".",
+            "module_root": "",
+            "branch": "",
+            "task_id": "",
+            "task_sha256": "",
+            "scope_sha256": "",
+            "plan_sha256": "",
+            "plan_lock_sha256": "",
+            "approval_review_run": "",
+            "dry_run": False,
+            "files_created": [],
+        }
+        print(f"[ERROR] PLAN_REVIEW_PATH_INVALID: {exc}", file=sys.stderr)
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        sys.exit(2)
+    except Exception as exc:
+        res = {
+            "schema_version": 1,
+            "action": "unknown",
+            "status": "FAILED",
+            "reason_code": "INTERNAL_ERROR",
+            "repository_root": ".",
+            "module_root": "",
+            "branch": "",
+            "task_id": "",
+            "task_sha256": "",
+            "scope_sha256": "",
+            "plan_sha256": "",
+            "plan_lock_sha256": "",
+            "approval_review_run": "",
+            "dry_run": False,
+            "files_created": [],
+        }
+        print(f"[ERROR] INTERNAL_ERROR: {exc}", file=sys.stderr)
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        sys.exit(2)

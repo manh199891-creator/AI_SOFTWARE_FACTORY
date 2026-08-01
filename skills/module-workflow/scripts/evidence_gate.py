@@ -140,9 +140,11 @@ def search_symbol_literal(
 
 
 
-def check_source_dirty(repo_root: Path, mod_norm: str) -> Optional[str]:
+def check_source_dirty(repo_root: Path, mod_norm: str) -> Tuple[Optional[str], Optional[str]]:
     res_status = run_git(["status", "--porcelain=v1", "-z", "--untracked-files=all"], repo_root)
-    if res_status.returncode == 0 and res_status.stdout:
+    if res_status.returncode != 0:
+        return None, "SOURCE_STATUS_UNAVAILABLE"
+    if res_status.stdout:
         raw = res_status.stdout
         tokens = raw.split("\x00")
         i = 0
@@ -164,8 +166,8 @@ def check_source_dirty(repo_root: Path, mod_norm: str) -> Optional[str]:
                 if mod_norm and (norm_p.startswith(mod_norm + "/") or norm_p == mod_norm):
                     path_in_mod = norm_p[len(mod_norm) :].lstrip("/")
                     if not (path_in_mod.startswith(".ai-workflow/") or path_in_mod.startswith(".sandbox/")):
-                        return norm_p
-    return None
+                        return norm_p, None
+    return None, None
 
 
 def evidence_collect(
@@ -254,7 +256,13 @@ def evidence_collect(
     forbidden_paths = scope_data.get("forbidden_paths", [])
 
     # Step 3. Source dirty check (porcelain v1 -z)
-    dirty_p = check_source_dirty(repo_root, mod_norm)
+    dirty_p, err_code = check_source_dirty(repo_root, mod_norm)
+    if err_code == "SOURCE_STATUS_UNAVAILABLE":
+        fail(
+            2,
+            make_result(action, "FAILED", "SOURCE_STATUS_UNAVAILABLE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
+            "Git status returned non-zero exit code",
+        )
     if dirty_p:
         fail(
             2,
@@ -284,7 +292,6 @@ def evidence_collect(
                 "path": rel_f,
                 "exists": False,
                 "tracked": False,
-                "file_sha256": "0" * 64,
                 "evidence_command": f"git ls-files --error-unmatch -- {rel_f}",
             })
             continue
@@ -292,15 +299,7 @@ def evidence_collect(
         try:
             full_f = resolve_contained_path(repo_root, rel_f, must_exist=False)
         except PathContainmentError as e:
-            failures.append(f"Containment violation for file: {rel_f}")
-            files_verified.append({
-                "path": rel_f,
-                "exists": False,
-                "tracked": False,
-                "file_sha256": "0" * 64,
-                "evidence_command": f"git ls-files --error-unmatch -- {rel_f}",
-            })
-            continue
+            fail(2, make_result(action, "FAILED", "EVIDENCE_SCOPE_VIOLATION", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
 
         f_exists = full_f.exists() and full_f.is_file()
         f_tracked = rel_f in tracked_files
@@ -310,14 +309,16 @@ def evidence_collect(
         elif not f_tracked:
             failures.append(f"Required file untracked: {rel_f}")
 
-        f_sha = sha256_file(full_f) if f_exists else "0" * 64
-        files_verified.append({
+        file_item: Dict[str, Any] = {
             "path": rel_f,
             "exists": f_exists,
             "tracked": f_tracked,
-            "file_sha256": f_sha,
             "evidence_command": f"git ls-files --error-unmatch -- {rel_f}",
-        })
+        }
+        if f_exists:
+            file_item["file_sha256"] = sha256_file(full_f)
+
+        files_verified.append(file_item)
 
     # Gather Symbols to verify
     symbols_verified: List[Dict[str, Any]] = []
@@ -327,7 +328,7 @@ def evidence_collect(
         try:
             matches = search_symbol_literal(repo_root, tracked_files, sym_str, None, allowed_paths, forbidden_paths)
         except PathContainmentError as e:
-            fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
+            fail(2, make_result(action, "FAILED", "EVIDENCE_SCOPE_VIOLATION", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
 
         if not matches:
             failures.append(f"Required scope symbol not found: {sym_str}")
@@ -345,7 +346,7 @@ def evidence_collect(
         try:
             matches = search_symbol_literal(repo_root, tracked_files, sym_str, sym_paths, allowed_paths, forbidden_paths)
         except PathContainmentError as e:
-            fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
+            fail(2, make_result(action, "FAILED", "EVIDENCE_SCOPE_VIOLATION", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
 
         if not matches:
             failures.append(f"Required request symbol not found: {sym_str}")
@@ -375,8 +376,7 @@ def evidence_collect(
         try:
             ds_full = resolve_contained_path(repo_root, ds_path, must_exist=True)
         except PathContainmentError as e:
-            failures.append(f"Diagnosis source containment violation: {ds_path}")
-            continue
+            fail(2, make_result(action, "FAILED", "EVIDENCE_SCOPE_VIOLATION", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
 
         if ds_path not in tracked_files:
             failures.append(f"Diagnosis source untracked: {ds_path}")
@@ -399,7 +399,8 @@ def evidence_collect(
     try:
         src_snapshot_sha = compute_scope_snapshot(repo_root, mod_norm, allowed_paths, forbidden_paths)
     except PathContainmentError as e:
-        fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
+        fail(2, make_result(action, "FAILED", "EVIDENCE_SCOPE_VIOLATION", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
+
 
     ready_to_implement = len(failures) == 0
 
@@ -704,6 +705,12 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    if "\x00" in args.module_root:
+        fail(2, make_result(args.action, "FAILED", "INVALID_MODULE_ROOT"), "Module root contains NUL byte")
+
+    if args.request_file and "\x00" in args.request_file:
+        fail(2, make_result(args.action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID"), "Request file contains NUL byte")
+
     repo_root = validate_repository_root(Path(args.repository_root), Path.cwd())
     if not repo_root:
         fail(2, make_result(args.action, "FAILED", "NOT_A_GIT_REPOSITORY"), "Invalid repository root or not a Git repository")
@@ -716,4 +723,67 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except ContractValidationError as exc:
+        res = {
+            "schema_version": 1,
+            "action": "unknown",
+            "status": "FAILED",
+            "reason_code": "EVIDENCE_INVALID",
+            "repository_root": ".",
+            "module_root": "",
+            "branch": "",
+            "task_id": "",
+            "files_checked": 0,
+            "symbols_checked": 0,
+            "diagnosis_sources_checked": 0,
+            "failures": [str(exc)],
+            "dry_run": False,
+            "files_created": [],
+        }
+        print(f"[ERROR] EVIDENCE_INVALID: {exc}", file=sys.stderr)
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        sys.exit(5)
+    except PathContainmentError as exc:
+        res = {
+            "schema_version": 1,
+            "action": "unknown",
+            "status": "FAILED",
+            "reason_code": "EVIDENCE_SCOPE_VIOLATION",
+            "repository_root": ".",
+            "module_root": "",
+            "branch": "",
+            "task_id": "",
+            "files_checked": 0,
+            "symbols_checked": 0,
+            "diagnosis_sources_checked": 0,
+            "failures": [str(exc)],
+            "dry_run": False,
+            "files_created": [],
+        }
+        print(f"[ERROR] EVIDENCE_SCOPE_VIOLATION: {exc}", file=sys.stderr)
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        sys.exit(2)
+    except Exception as exc:
+        res = {
+            "schema_version": 1,
+            "action": "unknown",
+            "status": "FAILED",
+            "reason_code": "INTERNAL_ERROR",
+            "repository_root": ".",
+            "module_root": "",
+            "branch": "",
+            "task_id": "",
+            "files_checked": 0,
+            "symbols_checked": 0,
+            "diagnosis_sources_checked": 0,
+            "failures": [str(exc)],
+            "dry_run": False,
+            "files_created": [],
+        }
+        print(f"[ERROR] INTERNAL_ERROR: {exc}", file=sys.stderr)
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        sys.exit(2)

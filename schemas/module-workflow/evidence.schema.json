@@ -35,7 +35,7 @@
           "file_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
           "evidence_command": { "type": "string" }
         },
-        "required": ["path", "exists", "tracked", "file_sha256", "evidence_command"],
+        "required": ["path", "exists", "tracked", "evidence_command"],
         "additionalProperties": false
       }
     },
@@ -59,8 +59,8 @@
     "diagnosis": { "type": "string" },
     "diagnosis_sources": {
       "type": "array",
-      "minItems": 1,
       "items": {
+
         "type": "object",
         "properties": {
           "path": {

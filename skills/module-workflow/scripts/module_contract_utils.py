@@ -165,10 +165,13 @@ def validate_repository_root(supplied_root: Path, cwd: Path) -> Optional[Path]:
 def validate_relative_path(path_str: str) -> bool:
     if not path_str or not isinstance(path_str, str):
         return False
+    if "\x00" in path_str:
+        return False
     norm = path_str.replace("\\", "/")
     if norm.startswith("/") or ":" in norm or ".." in norm.split("/"):
         return False
     return True
+
 
 
 def normalize_rel_path(path_str: str) -> str:
@@ -370,17 +373,13 @@ def compute_scope_snapshot(
     all_tracked = list_tracked_files(repo_root)
     snapshot_items: List[Tuple[str, str]] = []
 
-    module_norm = normalize_rel_path(module_root_rel)
     repo_abs = repo_root.resolve()
 
     for rel_path in all_tracked:
         norm_path = normalize_rel_path(rel_path)
 
-        if module_norm and not norm_path.startswith(module_norm + "/") and norm_path != module_norm:
-            continue
-
-        path_in_module = norm_path[len(module_norm) :].lstrip("/") if module_norm else norm_path
-        if path_in_module.startswith(".ai-workflow/") or path_in_module.startswith(".sandbox/"):
+        parts = norm_path.split("/")
+        if ".ai-workflow" in parts or ".sandbox" in parts:
             continue
 
         if is_path_allowed(norm_path, allowed_paths, forbidden_paths):
@@ -412,6 +411,7 @@ def compute_scope_snapshot(
         stream.append(10)  # LF
 
     return sha256_bytes(bytes(stream))
+
 
 
 # ---------------------------------------------------------------------------
@@ -766,9 +766,96 @@ def validate_evidence_contract(payload: Any) -> None:
         raise ContractValidationError("Evidence symbols_verified must be an array.")
     if not isinstance(payload["diagnosis_sources"], list):
         raise ContractValidationError("Evidence diagnosis_sources must be an array.")
-    if not isinstance(payload["diagnosis"], str):
-        raise ContractValidationError("Evidence diagnosis must be a string.")
+    if not isinstance(payload["diagnosis"], str) or not payload["diagnosis"].strip():
+        raise ContractValidationError("Evidence diagnosis must be a non-empty string.")
 
+    # Validate files_verified items for all payloads
+    for item in payload["files_verified"]:
+        if not isinstance(item, dict):
+            raise ContractValidationError("files_verified item must be object.")
+        allowed_f = {"path", "exists", "tracked", "evidence_command", "file_sha256"}
+        required_f = {"path", "exists", "tracked", "evidence_command"}
+        missing_f = required_f - set(item.keys())
+        if missing_f:
+            raise ContractValidationError(f"files_verified item missing required property: {sorted(missing_f)}")
+        extra_f = set(item.keys()) - allowed_f
+        if extra_f:
+            raise ContractValidationError(f"files_verified item has unexpected properties: {sorted(extra_f)}")
+
+        if not isinstance(item["path"], str) or not validate_relative_path(item["path"]):
+            raise ContractValidationError(f"files_verified item path invalid relative path: {item.get('path')!r}")
+        if not isinstance(item["exists"], bool):
+            raise ContractValidationError(f"files_verified item exists must be boolean: {item.get('exists')!r}")
+        if not isinstance(item["tracked"], bool):
+            raise ContractValidationError(f"files_verified item tracked must be boolean: {item.get('tracked')!r}")
+        if not isinstance(item["evidence_command"], str) or not item["evidence_command"].strip():
+            raise ContractValidationError("files_verified item evidence_command must be non-empty string.")
+
+        if "file_sha256" in item:
+            f_sha = item["file_sha256"]
+            if not isinstance(f_sha, str) or not SHA256_LOWER_RE.match(f_sha):
+                raise ContractValidationError(f"files_verified item file_sha256 invalid: {f_sha!r}")
+
+    # Validate symbols_verified items for all payloads
+    for item in payload["symbols_verified"]:
+        if not isinstance(item, dict):
+            raise ContractValidationError("symbols_verified item must be object.")
+        allowed_s = {"symbol", "evidence_command", "matches", "found_count"}
+        missing_s = allowed_s - set(item.keys())
+        if missing_s:
+            raise ContractValidationError(f"symbols_verified item missing required property: {sorted(missing_s)}")
+        extra_s = set(item.keys()) - allowed_s
+        if extra_s:
+            raise ContractValidationError(f"symbols_verified item has unexpected properties: {sorted(extra_s)}")
+
+        if not isinstance(item["symbol"], str) or not item["symbol"].strip():
+            raise ContractValidationError("symbols_verified item symbol must be non-empty string.")
+        if not isinstance(item["evidence_command"], str) or not item["evidence_command"].strip():
+            raise ContractValidationError("symbols_verified item evidence_command must be non-empty string.")
+
+        matches = item["matches"]
+        if not isinstance(matches, list) or not all(isinstance(m, str) for m in matches):
+            raise ContractValidationError(f"symbols_verified item matches must be an array of strings: {matches!r}")
+
+        fc = item["found_count"]
+        if not isinstance(fc, int) or isinstance(fc, bool):
+            raise ContractValidationError(f"symbols_verified item found_count must be integer: {fc!r}")
+        if fc != len(matches):
+            raise ContractValidationError(f"symbols_verified item found_count {fc} does not match matches count {len(matches)}")
+
+    # Validate diagnosis_sources items for all payloads
+    for item in payload["diagnosis_sources"]:
+        if not isinstance(item, dict):
+            raise ContractValidationError("diagnosis_sources item must be object.")
+        allowed_d = {"path", "line_start", "line_end", "reason", "file_sha256", "excerpt_sha256"}
+        missing_d = allowed_d - set(item.keys())
+        if missing_d:
+            raise ContractValidationError(f"diagnosis_sources item missing required property: {sorted(missing_d)}")
+        extra_d = set(item.keys()) - allowed_d
+        if extra_d:
+            raise ContractValidationError(f"diagnosis_sources item has unexpected properties: {sorted(extra_d)}")
+
+        if not isinstance(item["path"], str) or not validate_relative_path(item["path"]):
+            raise ContractValidationError(f"diagnosis_sources item path invalid relative path: {item.get('path')!r}")
+
+        l_start = item["line_start"]
+        l_end = item["line_end"]
+        if not isinstance(l_start, int) or isinstance(l_start, bool) or l_start < 1:
+            raise ContractValidationError(f"diagnosis_sources item line_start must be integer >= 1: {l_start!r}")
+        if not isinstance(l_end, int) or isinstance(l_end, bool) or l_end < l_start:
+            raise ContractValidationError(f"diagnosis_sources item line_end must be integer >= line_start: {l_end!r}")
+
+        if not isinstance(item["reason"], str) or not item["reason"].strip():
+            raise ContractValidationError("diagnosis_sources item reason must be non-empty string.")
+
+        f_sha = item["file_sha256"]
+        e_sha = item["excerpt_sha256"]
+        if not isinstance(f_sha, str) or not SHA256_LOWER_RE.match(f_sha):
+            raise ContractValidationError(f"diagnosis_sources item file_sha256 invalid: {f_sha!r}")
+        if not isinstance(e_sha, str) or not SHA256_LOWER_RE.match(e_sha):
+            raise ContractValidationError(f"diagnosis_sources item excerpt_sha256 invalid: {e_sha!r}")
+
+    # Additional strict checks when ready_to_implement is true
     if payload["ready_to_implement"]:
         if not isinstance(payload["base_commit"], str) or not GIT_SHA_LOWER_RE.match(payload["base_commit"]):
             raise ContractValidationError(f"Evidence base_commit invalid when ready: {payload['base_commit']!r}")
@@ -777,64 +864,25 @@ def validate_evidence_contract(payload: Any) -> None:
             if not isinstance(val, str) or not SHA256_LOWER_RE.match(val):
                 raise ContractValidationError(f"Evidence {sha_key} invalid when ready: {val!r}")
 
+        if len(payload["diagnosis"]) < 20:
+            raise ContractValidationError("Evidence diagnosis must be at least 20 characters when ready_to_implement is true.")
         if len(payload["files_verified"]) < 1:
             raise ContractValidationError("Evidence files_verified must contain at least 1 item when ready_to_implement is true.")
         if len(payload["diagnosis_sources"]) < 1:
             raise ContractValidationError("Evidence diagnosis_sources must contain at least 1 item when ready_to_implement is true.")
 
         for item in payload["files_verified"]:
-            if not isinstance(item, dict):
-                raise ContractValidationError("files_verified item must be object.")
-            allowed_f = {"path", "exists", "tracked", "file_sha256", "evidence_command"}
-            missing_f = allowed_f - set(item.keys())
-            if missing_f:
-                raise ContractValidationError(f"files_verified item missing required property: {sorted(missing_f)}")
-            if set(item.keys()) - allowed_f:
-                raise ContractValidationError(f"files_verified item has unexpected properties: {sorted(set(item.keys()) - allowed_f)}")
-            if not isinstance(item.get("path"), str) or not validate_relative_path(item.get("path")):
-                raise ContractValidationError(f"files_verified item path invalid relative path: {item.get('path')!r}")
-            if item.get("exists") is not True:
-                raise ContractValidationError(f"files_verified item exists must be true: {item}")
-            if item.get("tracked") is not True:
-                raise ContractValidationError(f"files_verified item tracked must be true: {item}")
-            if not isinstance(item.get("file_sha256"), str) or not SHA256_LOWER_RE.match(item.get("file_sha256", "")):
-                raise ContractValidationError(f"files_verified item file_sha256 invalid: {item}")
-            if not isinstance(item.get("evidence_command"), str) or not item.get("evidence_command").strip():
-                raise ContractValidationError(f"files_verified item evidence_command invalid: {item}")
+            if item["exists"] is not True:
+                raise ContractValidationError(f"files_verified item exists must be true when ready: {item}")
+            if item["tracked"] is not True:
+                raise ContractValidationError(f"files_verified item tracked must be true when ready: {item}")
+            if "file_sha256" not in item:
+                raise ContractValidationError(f"files_verified item file_sha256 required when ready: {item}")
 
         for item in payload["symbols_verified"]:
-            if not isinstance(item, dict):
-                raise ContractValidationError("symbols_verified item must be object.")
-            allowed_s = {"symbol", "evidence_command", "matches", "found_count"}
-            missing_s = allowed_s - set(item.keys())
-            if missing_s:
-                raise ContractValidationError(f"symbols_verified item missing required property: {sorted(missing_s)}")
-            if set(item.keys()) - allowed_s:
-                raise ContractValidationError(f"symbols_verified item has unexpected properties: {sorted(set(item.keys()) - allowed_s)}")
-            if not isinstance(item.get("evidence_command"), str) or not item.get("evidence_command").strip():
-                raise ContractValidationError(f"symbols_verified item evidence_command invalid: {item}")
-            matches = item.get("matches")
-            if not isinstance(matches, list) or len(matches) < 1:
-                raise ContractValidationError(f"symbols_verified item matches must contain at least 1 match: {item}")
-            fc = item.get("found_count")
-            if not isinstance(fc, int) or isinstance(fc, bool) or fc < 1:
-                raise ContractValidationError(f"symbols_verified item found_count must be integer >= 1 when ready: {item}")
+            if len(item["matches"]) < 1:
+                raise ContractValidationError(f"symbols_verified item matches must contain at least 1 match when ready: {item}")
 
-        for item in payload["diagnosis_sources"]:
-            if not isinstance(item, dict):
-                raise ContractValidationError("diagnosis_sources item must be object.")
-            allowed_d = {"path", "line_start", "line_end", "reason", "file_sha256", "excerpt_sha256"}
-            missing_d = allowed_d - set(item.keys())
-            if missing_d:
-                raise ContractValidationError(f"diagnosis_sources item missing required property: {sorted(missing_d)}")
-            if set(item.keys()) - allowed_d:
-                raise ContractValidationError(f"diagnosis_sources item has unexpected properties: {sorted(set(item.keys()) - allowed_d)}")
-            f_sha = item.get("file_sha256")
-            e_sha = item.get("excerpt_sha256")
-            if not isinstance(f_sha, str) or not SHA256_LOWER_RE.match(f_sha):
-                raise ContractValidationError(f"diagnosis_sources item file_sha256 invalid: {item}")
-            if not isinstance(e_sha, str) or not SHA256_LOWER_RE.match(e_sha):
-                raise ContractValidationError(f"diagnosis_sources item excerpt_sha256 invalid: {item}")
 
 
 # ---------------------------------------------------------------------------
@@ -935,7 +983,56 @@ def verify_plan_lock_context(
     if lock_data["approved_by"] != "codex" or lock_data["plan_status"] != "APPROVED":
         raise PlanLockVerificationError("PLAN_LOCK_INVALID", "PLAN_LOCK.json approval invalid", exit_code=5)
 
+    # Verify Plan Lock approval provenance
+    app_rel = lock_data.get("approval_file", "")
+    if not validate_relative_path(app_rel):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", f"Approval file relative path invalid: {app_rel!r}", exit_code=5)
+
+    history_dir = (module_abs / ".ai-workflow" / "history").resolve()
+    try:
+        app_full = resolve_contained_path(repo_abs, app_rel, must_exist=True)
+        app_full.relative_to(history_dir)
+    except (PathContainmentError, ValueError) as e:
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", f"Approval file path invalid or outside history: {app_rel!r} ({e})", exit_code=5)
+
+    if not app_full.exists() or not app_full.is_file():
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", f"Approval file missing: {app_rel!r}", exit_code=5)
+
+    curr_app_hash = sha256_file(app_full)
+    if curr_app_hash != lock_data.get("approval_sha256"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval file SHA-256 mismatch", exit_code=5)
+
+    try:
+        app_json = load_json(app_full)
+        validate_plan_review_contract(app_json)
+    except Exception as e:
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", f"Invalid approval plan review contract: {e}", exit_code=5)
+
+    if app_json["review_run_id"] != lock_data.get("approved_review_run"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval review_run_id mismatch", exit_code=5)
+    if app_json["reviewed_at"] != lock_data.get("approved_at"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval reviewed_at mismatch", exit_code=5)
+    if app_json["reviewer"] != lock_data.get("approved_by"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval reviewer mismatch", exit_code=5)
+    if app_json["decision"] != "APPROVED":
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval decision is not APPROVED", exit_code=5)
+    if app_json["task_id"] != lock_data.get("task_id"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval task_id mismatch", exit_code=5)
+    if app_json["module_id"] != lock_data.get("module_id"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval module_id mismatch", exit_code=5)
+    if app_json["reviewed_branch"] != lock_data.get("branch"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval branch mismatch", exit_code=5)
+    if app_json["base_commit"] != lock_data.get("base_commit"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval base_commit mismatch", exit_code=5)
+    if app_json["task_sha256"] != lock_data.get("task_sha256"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval task_sha256 mismatch", exit_code=5)
+    if app_json["scope_sha256"] != lock_data.get("scope_sha256"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval scope_sha256 mismatch", exit_code=5)
+    if app_json["plan_sha256"] != lock_data.get("plan_sha256"):
+        raise PlanLockVerificationError("PLAN_LOCK_INVALID", "Approval plan_sha256 mismatch", exit_code=5)
+
     return (
+
         module_json,
         scope_json,
         lock_data,
