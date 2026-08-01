@@ -4,8 +4,10 @@ test_module_plan_lock.py — Unit and integration tests for plan_lock.py & plan_
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+
 import platform
 import subprocess
 import sys
