@@ -1480,8 +1480,10 @@ def test_shared_dependency_is_in_source_snapshot(tmp_path: Path) -> None:
     }
     app_file = repo / app_rel
     app_file.write_text(json.dumps(approval_data), encoding="utf-8")
+    (ai_dir / "PLAN_LOCK.json").unlink(missing_ok=True)
     plan_lock_script = REPO_ROOT / "skills" / "module-workflow" / "scripts" / "plan_lock.py"
     subprocess.run([sys.executable, str(plan_lock_script), "create", "--repository-root", str(repo), "--module-root", "src/Antigravity.DrawBeams", "--approval-file", app_rel], cwd=repo, check=True, capture_output=True)
+
 
 
     run_evidence_gate(repo, "collect")
