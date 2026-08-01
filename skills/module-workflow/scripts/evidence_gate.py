@@ -18,6 +18,9 @@ from typing import Any, Dict, List, Optional, Tuple, Set
 # Import shared module_contract_utils
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from module_contract_utils import (
+    ContractValidationError,
+    PathContainmentError,
+    PlanLockVerificationError,
     atomic_write_json,
     canonical_json_bytes,
     compute_scope_snapshot,
@@ -33,12 +36,16 @@ from module_contract_utils import (
     normalize_rel_path,
     path_matches_pattern,
     print_result,
+    resolve_contained_path,
     run_git,
     sha256_bytes,
     sha256_file,
     utc_now,
+    validate_evidence_contract,
+    validate_evidence_request_contract,
     validate_relative_path,
     validate_repository_root,
+    verify_plan_lock_context,
 )
 
 
@@ -111,8 +118,9 @@ def search_symbol_literal(
             if not matched_pattern:
                 continue
 
-        full_p = repo_root / norm_p
-        if not full_p.exists() or not full_p.is_file():
+        try:
+            full_p = resolve_contained_path(repo_root, norm_p, must_exist=True)
+        except PathContainmentError:
             continue
 
         # Skip binary files containing NUL
@@ -142,96 +150,107 @@ def evidence_collect(
     action = "collect"
     repo_root_str = str(repo_root)
 
-    if not validate_relative_path(module_root_rel):
-        fail(2, make_result(action, "FAILED", "INVALID_RELATIVE_PATH", repository_root=repo_root_str), "Invalid module_root")
-    if not validate_relative_path(request_file_rel):
-        fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str), "Invalid request_file path")
+    # Step 1. Full Plan Lock verification using shared helper
+    try:
+        (
+            module_json,
+            scope_data,
+            lock_data,
+            mod_dir,
+            task_md_path,
+            scope_json_path,
+            plan_md_path,
+            plan_lock_path,
+            branch,
+        ) = verify_plan_lock_context(repo_root, module_root_rel, require_unprotected_branch=True)
+    except PlanLockVerificationError as err:
+        mod_norm = normalize_rel_path(module_root_rel) if validate_relative_path(module_root_rel) else ""
+        fail(
+            err.exit_code,
+            make_result(action, "FAILED", err.reason_code, repository_root=repo_root_str, module_root=mod_norm),
+            err.message,
+        )
 
     mod_norm = normalize_rel_path(module_root_rel)
-    req_norm = normalize_rel_path(request_file_rel)
-    sandbox_prefix = f"{mod_norm}/.sandbox/"
+    task_id = lock_data["task_id"]
+    lock_sha = sha256_bytes(canonical_json_bytes(lock_data))
 
-    if not req_norm.startswith(sandbox_prefix):
-        fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm), "Request file must be inside .sandbox/")
-
-    mod_dir = repo_root / mod_norm
-    ai_dir = mod_dir / ".ai-workflow"
-    plan_lock_path = ai_dir / "PLAN_LOCK.json"
-    module_json_path = ai_dir / "MODULE.json"
-    scope_json_path = ai_dir / "SCOPE.json"
-    task_md_path = ai_dir / "TASK.md"
-    plan_md_path = ai_dir / "PLAN.md"
-
-    # Preflight Check 1: PLAN_LOCK existence & integrity
-    if not plan_lock_path.exists():
-        fail(2, make_result(action, "FAILED", "PLAN_LOCK_REQUIRED", repository_root=repo_root_str, module_root=mod_norm), "PLAN_LOCK.json missing")
-
+    # Step 2. Validate request file path and load evidence request
     try:
-        lock_data = load_json(plan_lock_path)
-        lock_sha = sha256_bytes(canonical_json_bytes(lock_data))
-    except Exception:
-        fail(2, make_result(action, "FAILED", "PLAN_LOCK_STALE", repository_root=repo_root_str, module_root=mod_norm), "PLAN_LOCK.json invalid")
+        sandbox_dir = mod_dir / ".sandbox"
+        req_full_path = resolve_contained_path(
+            repo_root,
+            request_file_rel,
+            must_exist=False,
+            containment_root=sandbox_dir,
+        )
+    except PathContainmentError as e:
+        fail(
+            2,
+            make_result(action, "FAILED", "EVIDENCE_REQUEST_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
+            str(e),
+        )
 
-    task_id = lock_data.get("task_id", "")
-    branch = get_current_branch(repo_root)
-
-    try:
-        module_data = load_json(module_json_path)
-        scope_data = load_json(scope_json_path)
-    except Exception:
-        fail(2, make_result(action, "FAILED", "PLAN_LOCK_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
-
-    if scope_data.get("work_branch") != branch:
-        fail(2, make_result(action, "FAILED", "BRANCH_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
-
-    if (
-        hash_task_file(task_md_path) != lock_data.get("task_sha256")
-        or hash_scope_file(scope_json_path) != lock_data.get("scope_sha256")
-        or hash_plan_file(plan_md_path) != lock_data.get("plan_sha256")
-    ):
-        fail(2, make_result(action, "FAILED", "PLAN_LOCK_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
-
-    # Preflight Check 2: Evidence Request file
-    req_full_path = repo_root / req_norm
     if not req_full_path.exists():
-        fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_MISSING", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
+        fail(
+            2,
+            make_result(action, "FAILED", "EVIDENCE_REQUEST_MISSING", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
+            f"Request file missing: {request_file_rel}",
+        )
 
     try:
         req_data = load_json(req_full_path)
-    except Exception:
-        fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
+    except Exception as e:
+        fail(
+            2,
+            make_result(action, "FAILED", "EVIDENCE_REQUEST_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
+            f"Failed to parse JSON: {e}",
+        )
 
-    if req_data.get("schema_version") != 1:
-        fail(2, make_result(action, "FAILED", "EVIDENCE_REQUEST_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
+    try:
+        validate_evidence_request_contract(req_data)
+    except ContractValidationError as e:
+        fail(
+            2,
+            make_result(action, "FAILED", "EVIDENCE_REQUEST_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
+            str(e),
+        )
 
-    if req_data.get("task_id") != task_id or req_data.get("module_id") != module_data.get("module_id"):
-        fail(2, make_result(action, "FAILED", "EVIDENCE_IDENTITY_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
+    if req_data["task_id"] != task_id or req_data["module_id"] != module_json["module_id"]:
+        fail(
+            2,
+            make_result(action, "FAILED", "EVIDENCE_IDENTITY_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
+            "Identity mismatch in evidence_request.json",
+        )
 
     allowed_paths = scope_data.get("allowed_paths", [])
     forbidden_paths = scope_data.get("forbidden_paths", [])
 
-    # Preflight Check 3: Source dirty check
+    # Step 3. Source dirty check
     res_status = run_git(["status", "--porcelain", "--untracked-files=all"], repo_root)
     if res_status.returncode == 0 and res_status.stdout.strip():
         for line in res_status.stdout.splitlines():
             clean_line = line.strip()
             if not clean_line:
                 continue
-            # Extract file path after status code
             parts = clean_line.split(maxsplit=1)
             if len(parts) < 2:
                 continue
             changed_p = normalize_rel_path(parts[1])
-            if mod_norm and changed_p.startswith(mod_norm + "/"):
+            if mod_norm and (changed_p.startswith(mod_norm + "/") or changed_p == mod_norm):
                 path_in_mod = changed_p[len(mod_norm) :].lstrip("/")
                 if not (path_in_mod.startswith(".ai-workflow/") or path_in_mod.startswith(".sandbox/")):
-                    fail(2, make_result(action, "FAILED", "SOURCE_CHANGED_BEFORE_EVIDENCE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), f"Source file changed before evidence: {changed_p}")
+                    fail(
+                        2,
+                        make_result(action, "FAILED", "SOURCE_CHANGED_BEFORE_EVIDENCE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha),
+                        f"Source file changed before evidence: {changed_p}",
+                    )
 
     tracked_files = list_tracked_files(repo_root)
 
     failures: List[str] = []
 
-    # 1. Gather Files to verify
+    # Gather Files to verify
     req_files_set: Set[str] = set()
     for f in scope_data.get("required_files", []):
         req_files_set.add(normalize_rel_path(f))
@@ -253,7 +272,18 @@ def evidence_collect(
             })
             continue
 
-        full_f = repo_root / rel_f
+        try:
+            full_f = resolve_contained_path(repo_root, rel_f, must_exist=False)
+        except PathContainmentError as e:
+            failures.append(f"Containment violation for file: {rel_f}")
+            files_verified.append({
+                "path": rel_f,
+                "exists": False,
+                "tracked": False,
+                "evidence_command": f"git ls-files --error-unmatch -- {rel_f}",
+            })
+            continue
+
         f_exists = full_f.exists() and full_f.is_file()
         f_tracked = rel_f in tracked_files
 
@@ -272,10 +302,10 @@ def evidence_collect(
             entry["file_sha256"] = sha256_file(full_f)
         files_verified.append(entry)
 
-    # 2. Gather Symbols to verify
+    # Gather Symbols to verify
     symbols_verified: List[Dict[str, Any]] = []
 
-    # Scope required_symbols (strings)
+    # Scope required_symbols
     for sym_str in scope_data.get("required_symbols", []):
         matches = search_symbol_literal(repo_root, tracked_files, sym_str, None, allowed_paths, forbidden_paths)
         if not matches:
@@ -284,9 +314,10 @@ def evidence_collect(
             "symbol": sym_str,
             "evidence_command": f"literal tracked-file search: {sym_str}",
             "matches": matches,
+            "found_count": len(matches),
         })
 
-    # Request symbols_to_verify ({symbol, paths})
+    # Request symbols_to_verify
     for sym_obj in req_data.get("symbols_to_verify", []):
         sym_str = sym_obj.get("symbol", "")
         sym_paths = sym_obj.get("paths", [])
@@ -297,9 +328,10 @@ def evidence_collect(
             "symbol": sym_str,
             "evidence_command": f"literal tracked-file search: {sym_str}",
             "matches": matches,
+            "found_count": len(matches),
         })
 
-    # 3. Diagnosis and Diagnosis Sources
+    # Diagnosis and Diagnosis Sources
     diagnosis_text = req_data.get("diagnosis", "").strip()
     if len(diagnosis_text) < 20 or "replace" in diagnosis_text.lower() or "todo" in diagnosis_text.lower():
         failures.append("Diagnosis text is invalid or placeholder")
@@ -315,9 +347,14 @@ def evidence_collect(
             failures.append(f"Diagnosis source scope violation: {ds_path}")
             continue
 
-        ds_full = repo_root / ds_path
-        if not ds_full.exists() or ds_path not in tracked_files:
-            failures.append(f"Diagnosis source missing or untracked: {ds_path}")
+        try:
+            ds_full = resolve_contained_path(repo_root, ds_path, must_exist=True)
+        except PathContainmentError as e:
+            failures.append(f"Diagnosis source containment violation: {ds_path}")
+            continue
+
+        if ds_path not in tracked_files:
+            failures.append(f"Diagnosis source untracked: {ds_path}")
             continue
 
         try:
@@ -341,24 +378,38 @@ def evidence_collect(
     gen_at = utc_now()
     evidence_payload: Dict[str, Any] = {
         "schema_version": 1,
-        "task_id": task_id,
-        "module_id": module_data.get("module_id", ""),
-        "repository_root": ".",
+        "action": action,
+        "status": "READY_FOR_IMPLEMENTATION" if ready_to_implement else "INSUFFICIENT_EVIDENCE",
+        "reason_code": "EVIDENCE_READY" if ready_to_implement else "INSUFFICIENT_EVIDENCE",
+        "repository_root": repo_root_str,
+        "module_root": mod_norm,
         "branch": branch,
+        "task_id": task_id,
         "base_commit": scope_data.get("base_commit", ""),
         "task_sha256": lock_data.get("task_sha256", ""),
         "scope_sha256": lock_data.get("scope_sha256", ""),
         "plan_sha256": lock_data.get("plan_sha256", ""),
         "plan_lock_sha256": lock_sha,
         "source_snapshot_sha256": src_snapshot_sha,
-        "generated_at": gen_at,
+        "ready_to_implement": ready_to_implement,
+        "files_checked": len(files_verified),
+        "symbols_checked": len(symbols_verified),
+        "diagnosis_sources_checked": len(diagnosis_sources_out),
         "files_verified": files_verified,
         "symbols_verified": symbols_verified,
         "diagnosis": diagnosis_text,
         "diagnosis_sources": diagnosis_sources_out,
-        "ready_to_implement": ready_to_implement,
+        "failures": failures,
+        "dry_run": dry_run,
+        "files_created": [],
     }
 
+    try:
+        validate_evidence_contract(evidence_payload)
+    except ContractValidationError as e:
+        fail(2, make_result(action, "FAILED", "EVIDENCE_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), str(e))
+
+    ai_dir = mod_dir / ".ai-workflow"
     evidence_path = ai_dir / "EVIDENCE.json"
     evidence_rel = f"{mod_norm}/.ai-workflow/EVIDENCE.json"
 
@@ -366,13 +417,12 @@ def evidence_collect(
     if evidence_path.exists():
         try:
             old_evidence = load_json(evidence_path)
+            validate_evidence_contract(old_evidence)
             old_ready = old_evidence.get("ready_to_implement", False)
             old_task = old_evidence.get("task_id", "")
             old_lock_sha = old_evidence.get("plan_lock_sha256", "")
 
             if old_ready:
-                # If existing is ready_to_implement=true:
-                # Compare payloads excluding generated_at
                 cmp_old = dict(old_evidence)
                 cmp_old.pop("generated_at", None)
                 cmp_new = dict(evidence_payload)
@@ -402,7 +452,6 @@ def evidence_collect(
                 else:
                     fail(3, make_result(action, "FAILED", "EVIDENCE_LOCKED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), "Existing READY evidence is immutable")
             else:
-                # Existing evidence is ready_to_implement=false
                 if old_task != task_id or old_lock_sha != lock_sha:
                     fail(3, make_result(action, "FAILED", "EVIDENCE_LOCKED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha), "Existing EVIDENCE mismatch task or lock")
         except Exception:
@@ -432,6 +481,8 @@ def evidence_collect(
         )
         print_result(res)
         sys.exit(exit_code)
+
+    evidence_payload["files_created"] = [evidence_rel]
 
     try:
         atomic_write_json(evidence_path, evidence_payload)
@@ -489,87 +540,96 @@ def evidence_verify(
     action = "verify"
     repo_root_str = str(repo_root)
 
-    if not validate_relative_path(module_root_rel):
-        fail(2, make_result(action, "FAILED", "INVALID_RELATIVE_PATH", repository_root=repo_root_str), "Invalid module_root")
+    try:
+        (
+            module_json,
+            scope_data,
+            lock_data,
+            mod_dir,
+            task_md_path,
+            scope_json_path,
+            plan_md_path,
+            plan_lock_path,
+            branch,
+        ) = verify_plan_lock_context(repo_root, module_root_rel, require_unprotected_branch=True)
+    except PlanLockVerificationError as err:
+        mod_norm = normalize_rel_path(module_root_rel) if validate_relative_path(module_root_rel) else ""
+        fail(
+            err.exit_code,
+            make_result(action, "FAILED", err.reason_code, repository_root=repo_root_str, module_root=mod_norm),
+            err.message,
+        )
 
     mod_norm = normalize_rel_path(module_root_rel)
-    branch = get_current_branch(repo_root)
-    mod_dir = repo_root / mod_norm
-    ai_dir = mod_dir / ".ai-workflow"
-    evidence_path = ai_dir / "EVIDENCE.json"
-    plan_lock_path = ai_dir / "PLAN_LOCK.json"
-    scope_json_path = ai_dir / "SCOPE.json"
-    task_md_path = ai_dir / "TASK.md"
-    plan_md_path = ai_dir / "PLAN.md"
+    task_id = lock_data["task_id"]
+    current_lock_sha = sha256_bytes(canonical_json_bytes(lock_data))
 
-    if not evidence_path.exists():
-        fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch), "EVIDENCE.json missing")
+    ai_dir = mod_dir / ".ai-workflow"
+    try:
+        evidence_path = resolve_contained_path(repo_root, f"{mod_norm}/.ai-workflow/EVIDENCE.json", must_exist=True, containment_root=ai_dir)
+    except PathContainmentError as e:
+        fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), str(e))
 
     try:
         evidence_data = load_json(evidence_path)
-    except Exception:
-        fail(5, make_result(action, "FAILED", "EVIDENCE_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch))
+    except Exception as e:
+        fail(5, make_result(action, "FAILED", "EVIDENCE_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), f"Invalid EVIDENCE.json: {e}")
 
-    task_id = evidence_data.get("task_id", "")
-    ev_lock_sha = evidence_data.get("plan_lock_sha256", "")
-    ev_src_snapshot = evidence_data.get("source_snapshot_sha256", "")
+    try:
+        validate_evidence_contract(evidence_data)
+    except ContractValidationError as e:
+        fail(5, make_result(action, "FAILED", "EVIDENCE_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), str(e))
 
     if not evidence_data.get("ready_to_implement"):
-        fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=ev_lock_sha, source_snapshot_sha256=ev_src_snapshot))
+        fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 
-    # 1. Verify Plan Lock
-    if not plan_lock_path.exists():
-        fail(5, make_result(action, "FAILED", "PLAN_LOCK_REQUIRED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
-
-    try:
-        lock_data = load_json(plan_lock_path)
-        current_lock_sha = sha256_bytes(canonical_json_bytes(lock_data))
-    except Exception:
-        fail(5, make_result(action, "FAILED", "PLAN_LOCK_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
-
-    if current_lock_sha != ev_lock_sha:
-        fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=ev_lock_sha))
-
+    # Cross-field validation against current lock and module
     if (
-        hash_task_file(task_md_path) != lock_data.get("task_sha256")
-        or hash_scope_file(scope_json_path) != lock_data.get("scope_sha256")
-        or hash_plan_file(plan_md_path) != lock_data.get("plan_sha256")
+        evidence_data.get("task_id") != task_id
+        or evidence_data.get("module_id") != module_json["module_id"]
+        or evidence_data.get("base_commit") != lock_data["base_commit"]
+        or evidence_data.get("branch") != branch
+        or evidence_data.get("task_sha256") != lock_data["task_sha256"]
+        or evidence_data.get("scope_sha256") != lock_data["scope_sha256"]
+        or evidence_data.get("plan_sha256") != lock_data["plan_sha256"]
+        or evidence_data.get("plan_lock_sha256") != current_lock_sha
     ):
-        fail(5, make_result(action, "FAILED", "PLAN_LOCK_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
-
-    try:
-        scope_data = load_json(scope_json_path)
-    except Exception:
-        fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
-
-    if scope_data.get("work_branch") != branch or branch != evidence_data.get("branch"):
-        fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+        fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), "Evidence content mismatch with current plan lock")
 
     allowed_paths = scope_data.get("allowed_paths", [])
     forbidden_paths = scope_data.get("forbidden_paths", [])
 
-    # 2. Verify Source Snapshot
+    # Verify Source Snapshot
     current_src_snapshot = compute_scope_snapshot(repo_root, mod_norm, allowed_paths, forbidden_paths)
-    if current_src_snapshot != ev_src_snapshot:
-        fail(5, make_result(action, "FAILED", "SOURCE_SNAPSHOT_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=ev_lock_sha, source_snapshot_sha256=current_src_snapshot))
+    if current_src_snapshot != evidence_data.get("source_snapshot_sha256"):
+        fail(5, make_result(action, "FAILED", "SOURCE_SNAPSHOT_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=current_lock_sha, source_snapshot_sha256=current_src_snapshot))
 
     tracked_files = list_tracked_files(repo_root)
 
-    # 3. Verify Files
+    # Verify Files
     for f_item in evidence_data.get("files_verified", []):
         f_path = normalize_rel_path(f_item.get("path", ""))
-        full_f = repo_root / f_path
-        if not full_f.exists() or f_path not in tracked_files:
-            fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
-        if sha256_file(full_f) != f_item.get("file_sha256"):
-            fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+        try:
+            full_f = resolve_contained_path(repo_root, f_path, must_exist=True)
+        except PathContainmentError:
+            fail(5, make_result(action, "FAILED", "VERIFIED_FILE_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 
-    # 4. Verify Diagnosis Sources
+        if f_path not in tracked_files:
+            fail(5, make_result(action, "FAILED", "VERIFIED_FILE_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+        if sha256_file(full_f) != f_item.get("file_sha256"):
+            fail(5, make_result(action, "FAILED", "VERIFIED_FILE_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+
+    # Verify Diagnosis Sources
     for ds_item in evidence_data.get("diagnosis_sources", []):
         ds_path = normalize_rel_path(ds_item.get("path", ""))
-        full_ds = repo_root / ds_path
-        if not full_ds.exists() or ds_path not in tracked_files:
+        try:
+            full_ds = resolve_contained_path(repo_root, ds_path, must_exist=True)
+        except PathContainmentError:
             fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+
+        if ds_path not in tracked_files:
+            fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+
         try:
             curr_f_sha, curr_exc_sha = hash_excerpt(full_ds, ds_item.get("line_start", 1), ds_item.get("line_end", 1))
             if curr_f_sha != ds_item.get("file_sha256") or curr_exc_sha != ds_item.get("excerpt_sha256"):
@@ -577,7 +637,7 @@ def evidence_verify(
         except Exception:
             fail(5, make_result(action, "FAILED", "EVIDENCE_STALE", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 
-    # 5. Verify Symbols
+    # Verify Symbols
     for sym_item in evidence_data.get("symbols_verified", []):
         sym_str = sym_item.get("symbol", "")
         matches = search_symbol_literal(repo_root, tracked_files, sym_str, None, allowed_paths, forbidden_paths)
@@ -592,8 +652,8 @@ def evidence_verify(
         module_root=mod_norm,
         branch=branch,
         task_id=task_id,
-        plan_lock_sha256=ev_lock_sha,
-        source_snapshot_sha256=ev_src_snapshot,
+        plan_lock_sha256=current_lock_sha,
+        source_snapshot_sha256=current_src_snapshot,
         ready_to_implement=True,
         files_checked=len(evidence_data.get("files_verified", [])),
         symbols_checked=len(evidence_data.get("symbols_verified", [])),

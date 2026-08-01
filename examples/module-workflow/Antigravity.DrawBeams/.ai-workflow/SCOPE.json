@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "task_id": "drawbeams-fix-corridor",
-  "module_id": "antigravity-drawbeams",
+  "module_id": "antigravity.drawbeams",
   "base_branch": "main",
   "work_branch": "task/drawbeams-fix-corridor",
   "base_commit": "1111111111111111111111111111111111111111",

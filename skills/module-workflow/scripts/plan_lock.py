@@ -18,6 +18,10 @@ from typing import Any, Dict, List, Optional
 # Import shared module_contract_utils
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from module_contract_utils import (
+    ContractValidationError,
+    PathContainmentError,
+    PlanLockVerificationError,
+    PROTECTED_BRANCHES,
     atomic_write_json,
     canonical_json_bytes,
     get_current_branch,
@@ -27,13 +31,15 @@ from module_contract_utils import (
     load_json,
     normalize_rel_path,
     print_result,
+    resolve_contained_path,
     run_git,
     sha256_bytes,
+    validate_plan_lock_contract,
+    validate_plan_review_contract,
     validate_relative_path,
     validate_repository_root,
+    verify_plan_lock_context,
 )
-
-PROTECTED_BRANCHES = {"main", "master", "develop", "release"}
 
 
 def make_result(
@@ -89,7 +95,6 @@ def validate_task_md(task_path: Path, canonical_tmpl_path: Optional[Path] = None
         if content == tmpl_content:
             return "TASK_PLACEHOLDER"
 
-    # Check required identity markers have non-empty values
     markers = ["- Task ID:", "- Module:", "- Requested by:"]
     lines = content.splitlines()
     for m in markers:
@@ -116,7 +121,6 @@ def validate_plan_md(plan_path: Path, canonical_tmpl_path: Optional[Path] = None
         if content == tmpl_content:
             return "PLAN_PLACEHOLDER"
 
-    # Check required sections and identity markers
     req_sections = ["## Proposed changes", "## Test plan", "## Acceptance criteria"]
     for sec in req_sections:
         if sec not in content:
@@ -146,22 +150,28 @@ def plan_lock_create(
     action = "create"
     repo_root_str = str(repo_root)
 
-    if not validate_relative_path(module_root_rel):
-        fail(2, make_result(action, "FAILED", "INVALID_RELATIVE_PATH", repository_root=repo_root_str), "Invalid module_root")
-    if not validate_relative_path(approval_file_rel):
-        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_PATH_INVALID", repository_root=repo_root_str), "Invalid approval_file path")
+    try:
+        mod_dir = resolve_contained_path(repo_root, module_root_rel, must_exist=True)
+    except PathContainmentError as e:
+        fail(2, make_result(action, "FAILED", "INVALID_MODULE_ROOT", repository_root=repo_root_str), str(e))
 
     mod_norm = normalize_rel_path(module_root_rel)
-    approval_norm = normalize_rel_path(approval_file_rel)
-    history_prefix = f"{mod_norm}/.ai-workflow/history/"
-    if not approval_norm.startswith(history_prefix):
-        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm), "Approval file must be in .ai-workflow/history/")
+
+    try:
+        history_dir = mod_dir / ".ai-workflow" / "history"
+        approval_full_path = resolve_contained_path(
+            repo_root,
+            approval_file_rel,
+            must_exist=True,
+            containment_root=history_dir,
+        )
+    except PathContainmentError as e:
+        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_PATH_INVALID", repository_root=repo_root_str, module_root=mod_norm), str(e))
 
     branch = get_current_branch(repo_root)
     if not branch or branch in PROTECTED_BRANCHES:
         fail(2, make_result(action, "FAILED", "PROTECTED_BRANCH_BLOCKED", repository_root=repo_root_str, module_root=mod_norm, branch=branch), f"Branch '{branch}' is protected or empty")
 
-    mod_dir = repo_root / mod_norm
     ai_dir = mod_dir / ".ai-workflow"
     module_json_path = ai_dir / "MODULE.json"
     task_md_path = ai_dir / "TASK.md"
@@ -214,22 +224,16 @@ def plan_lock_create(
     if plan_err:
         fail(2, make_result(action, "FAILED", plan_err, repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 
-    # Validate Approval File
-    approval_full_path = repo_root / approval_norm
-    if not approval_full_path.exists():
-        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
-
+    # Load & Validate Approval Contract
     try:
         approval_data = load_json(approval_full_path)
-    except Exception:
-        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+    except Exception as e:
+        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), f"Invalid JSON: {e}")
 
-    if (
-        approval_data.get("schema_version") != 1
-        or approval_data.get("review_type") != "PLAN"
-        or approval_data.get("reviewer") != "codex"
-    ):
-        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+    try:
+        validate_plan_review_contract(approval_data)
+    except ContractValidationError as e:
+        fail(2, make_result(action, "FAILED", "PLAN_REVIEW_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), str(e))
 
     if approval_data.get("decision") != "APPROVED":
         fail(2, make_result(action, "FAILED", "PLAN_REVIEW_NOT_APPROVED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
@@ -246,6 +250,11 @@ def plan_lock_create(
     if approval_data.get("base_commit") != base_commit:
         fail(2, make_result(action, "FAILED", "BASE_COMMIT_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 
+    # Check approval commit is in Git history
+    res_log = run_git(["log", "--format=%H"], repo_root)
+    if res_log.returncode != 0:
+        fail(2, make_result(action, "FAILED", "APPROVAL_NOT_IN_HISTORY", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
+
     curr_task_sha = hash_task_file(task_md_path)
     curr_scope_sha = hash_scope_file(scope_json_path)
     curr_plan_sha = hash_plan_file(plan_md_path)
@@ -257,20 +266,35 @@ def plan_lock_create(
     ):
         fail(2, make_result(action, "FAILED", "PLAN_REVIEW_HASH_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id))
 
+    approval_file_sha = sha256_file(approval_full_path)
+    approval_rel_norm = normalize_rel_path(approval_file_rel)
+
     # Construct PLAN_LOCK payload
     lock_payload = {
         "schema_version": 1,
+        "module_id": module_data.get("module_id"),
+        "branch": branch,
         "task_id": task_id,
-        "plan_status": "APPROVED",
+        "base_commit": base_commit,
         "task_sha256": curr_task_sha,
         "scope_sha256": curr_scope_sha,
         "plan_sha256": curr_plan_sha,
+        "approval_file": approval_rel_norm,
+        "approval_sha256": approval_file_sha,
+        "approval_commit": base_commit,
+        "locked_by": "codex",
+        "locked_at": approval_data.get("reviewed_at"),
+        "plan_status": "APPROVED",
         "approved_by": "codex",
-        "approved_review_run": approval_data.get("review_run_id", ""),
-        "approved_at": approval_data.get("reviewed_at", ""),
-        "base_commit": base_commit,
+        "approved_review_run": approval_data.get("review_run_id"),
+        "approved_at": approval_data.get("reviewed_at"),
         "amendment_count": 0,
     }
+
+    try:
+        validate_plan_lock_contract(lock_payload)
+    except ContractValidationError as e:
+        fail(2, make_result(action, "FAILED", "PLAN_LOCK_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id), str(e))
 
     lock_sha = sha256_bytes(canonical_json_bytes(lock_payload))
     plan_lock_path = ai_dir / "PLAN_LOCK.json"
@@ -280,6 +304,7 @@ def plan_lock_create(
     if plan_lock_path.exists():
         try:
             existing_payload = load_json(plan_lock_path)
+            validate_plan_lock_contract(existing_payload)
             existing_sha = sha256_bytes(canonical_json_bytes(existing_payload))
             if existing_payload == lock_payload or existing_sha == lock_sha:
                 res = make_result(
@@ -374,59 +399,29 @@ def plan_lock_verify(
     action = "verify"
     repo_root_str = str(repo_root)
 
-    if not validate_relative_path(module_root_rel):
-        fail(2, make_result(action, "FAILED", "INVALID_RELATIVE_PATH", repository_root=repo_root_str), "Invalid module_root")
+    try:
+        (
+            module_json,
+            scope_json,
+            lock_data,
+            module_abs,
+            task_path,
+            scope_path,
+            plan_path,
+            lock_path,
+            current_branch,
+        ) = verify_plan_lock_context(repo_root, module_root_rel, require_unprotected_branch=True)
+    except PlanLockVerificationError as err:
+        mod_norm = normalize_rel_path(module_root_rel) if validate_relative_path(module_root_rel) else ""
+        fail(
+            err.exit_code,
+            make_result(action, "FAILED", err.reason_code, repository_root=repo_root_str, module_root=mod_norm),
+            err.message,
+        )
 
     mod_norm = normalize_rel_path(module_root_rel)
-    branch = get_current_branch(repo_root)
-    mod_dir = repo_root / mod_norm
-    ai_dir = mod_dir / ".ai-workflow"
-    plan_lock_path = ai_dir / "PLAN_LOCK.json"
-
-    if not plan_lock_path.exists():
-        fail(5, make_result(action, "FAILED", "PLAN_LOCK_REQUIRED", repository_root=repo_root_str, module_root=mod_norm, branch=branch), "PLAN_LOCK.json does not exist")
-
-    try:
-        lock_data = load_json(plan_lock_path)
-    except Exception:
-        fail(5, make_result(action, "FAILED", "PLAN_LOCK_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch))
-
-    task_id = lock_data.get("task_id", "")
+    task_id = lock_data["task_id"]
     lock_sha = sha256_bytes(canonical_json_bytes(lock_data))
-
-    task_md_path = ai_dir / "TASK.md"
-    scope_json_path = ai_dir / "SCOPE.json"
-    plan_md_path = ai_dir / "PLAN.md"
-
-    if not (task_md_path.exists() and scope_json_path.exists() and plan_md_path.exists()):
-        fail(5, make_result(action, "FAILED", "PLAN_LOCK_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
-
-    try:
-        scope_data = load_json(scope_json_path)
-    except Exception:
-        fail(5, make_result(action, "FAILED", "SCOPE_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
-
-    if scope_data.get("task_id") != task_id:
-        fail(5, make_result(action, "FAILED", "PLAN_LOCK_INVALID", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
-
-    if branch != scope_data.get("work_branch"):
-        fail(5, make_result(action, "FAILED", "BRANCH_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
-
-    if lock_data.get("base_commit") != scope_data.get("base_commit"):
-        fail(5, make_result(action, "FAILED", "BASE_COMMIT_MISMATCH", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, plan_lock_sha256=lock_sha))
-
-    curr_task_sha = hash_task_file(task_md_path)
-    curr_scope_sha = hash_scope_file(scope_json_path)
-    curr_plan_sha = hash_plan_file(plan_md_path)
-
-    if curr_task_sha != lock_data.get("task_sha256"):
-        fail(5, make_result(action, "FAILED", "TASK_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, task_sha256=curr_task_sha, scope_sha256=curr_scope_sha, plan_sha256=curr_plan_sha, plan_lock_sha256=lock_sha))
-
-    if curr_scope_sha != lock_data.get("scope_sha256"):
-        fail(5, make_result(action, "FAILED", "SCOPE_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, task_sha256=curr_task_sha, scope_sha256=curr_scope_sha, plan_sha256=curr_plan_sha, plan_lock_sha256=lock_sha))
-
-    if curr_plan_sha != lock_data.get("plan_sha256"):
-        fail(5, make_result(action, "FAILED", "PLAN_CHANGED", repository_root=repo_root_str, module_root=mod_norm, branch=branch, task_id=task_id, task_sha256=curr_task_sha, scope_sha256=curr_scope_sha, plan_sha256=curr_plan_sha, plan_lock_sha256=lock_sha))
 
     res = make_result(
         action,
@@ -434,11 +429,11 @@ def plan_lock_verify(
         "PLAN_LOCK_VERIFIED",
         repository_root=repo_root_str,
         module_root=mod_norm,
-        branch=branch,
+        branch=current_branch,
         task_id=task_id,
-        task_sha256=curr_task_sha,
-        scope_sha256=curr_scope_sha,
-        plan_sha256=curr_plan_sha,
+        task_sha256=lock_data["task_sha256"],
+        scope_sha256=lock_data["scope_sha256"],
+        plan_sha256=lock_data["plan_sha256"],
         plan_lock_sha256=lock_sha,
         approval_review_run=lock_data.get("approved_review_run", ""),
         dry_run=False,

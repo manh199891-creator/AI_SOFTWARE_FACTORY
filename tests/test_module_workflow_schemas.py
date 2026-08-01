@@ -7,6 +7,13 @@ import pytest
 from pathlib import Path
 from jsonschema import Draft7Validator, FormatChecker, ValidationError
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "skills" / "module-workflow" / "scripts"))
+from module_contract_utils import (
+    hash_task_file, hash_scope_file, hash_plan_file,
+    hash_excerpt, sha256_file, canonical_json_bytes, sha256_bytes
+)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -214,6 +221,88 @@ def test_drawbeams_sandbox_manifest_example_validates(schemas_dir: Path, example
     instance = load_json(examples_dir / ".sandbox/manifest.json")
     validate_schema_instance(schema, instance)
     validate_sandbox_dll_path(instance)
+
+
+# ---------------------------------------------------------------------------
+# DrawBeams Example Real Hash Verification Tests
+# ---------------------------------------------------------------------------
+
+def test_drawbeams_example_file_hash_is_real(examples_dir: Path) -> None:
+    cmd_file = examples_dir / "src" / "Antigravity.DrawBeams" / "CreateBeamCommand.cs"
+    assert cmd_file.exists()
+    real_sha = sha256_file(cmd_file)
+
+    ev_data = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    f_item = ev_data["files_verified"][0]
+    assert f_item["file_sha256"] == real_sha
+    assert not f_item["file_sha256"].startswith("dddddddd")
+
+
+def test_drawbeams_example_excerpt_hash_is_real(examples_dir: Path) -> None:
+    cmd_file = examples_dir / "src" / "Antigravity.DrawBeams" / "CreateBeamCommand.cs"
+    real_f_sha, real_exc_sha = hash_excerpt(cmd_file, 20, 26)
+
+    ev_data = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    ds_item = ev_data["diagnosis_sources"][0]
+    assert ds_item["file_sha256"] == real_f_sha
+    assert ds_item["excerpt_sha256"] == real_exc_sha
+    assert not ds_item["excerpt_sha256"].startswith("eeeeeeee")
+
+
+def test_drawbeams_example_source_snapshot_is_real(examples_dir: Path) -> None:
+    proj_file = examples_dir / "src" / "Antigravity.DrawBeams" / "Antigravity.DrawBeams.csproj"
+    cmd_file = examples_dir / "src" / "Antigravity.DrawBeams" / "CreateBeamCommand.cs"
+    proj_sha = sha256_file(proj_file)
+    cmd_sha = sha256_file(cmd_file)
+
+    snapshot_stream = bytearray()
+    for rel_p, f_sha in sorted([
+        ("src/Antigravity.DrawBeams/Antigravity.DrawBeams.csproj", proj_sha),
+        ("src/Antigravity.DrawBeams/CreateBeamCommand.cs", cmd_sha)
+    ]):
+        snapshot_stream.extend(rel_p.encode("utf-8"))
+        snapshot_stream.append(0)
+        snapshot_stream.extend(f_sha.encode("utf-8"))
+        snapshot_stream.append(10)
+    expected_snapshot = sha256_bytes(bytes(snapshot_stream))
+
+    ev_data = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    assert ev_data["source_snapshot_sha256"] == expected_snapshot
+    assert not ev_data["source_snapshot_sha256"].startswith("eeeeeeee")
+
+
+def test_drawbeams_example_plan_lock_hash_is_real(examples_dir: Path) -> None:
+    lock_data = load_json(examples_dir / ".ai-workflow/PLAN_LOCK.json")
+    expected_lock_sha = sha256_bytes(canonical_json_bytes(lock_data))
+
+    ev_data = load_json(examples_dir / ".ai-workflow/EVIDENCE.json")
+    assert ev_data["plan_lock_sha256"] == expected_lock_sha
+
+
+def test_contract_docs_preserve_module_bootstrap_section(repo_root: Path) -> None:
+    doc_path = repo_root / "docs" / "MODULE_WORKFLOW_CONTRACT.md"
+    assert doc_path.exists()
+    content = doc_path.read_text(encoding="utf-8")
+    assert "## Module bootstrap" in content
+    assert "### Command example" in content
+    assert "### Generated files" in content
+    assert "### Generated directories" in content
+    assert "### Protected branch rule" in content
+    assert "### Conflict policy" in content
+    assert "### Idempotency" in content
+    assert "### `.gitignore` managed block" in content
+    assert "### Phase B non-goals" in content
+
+
+def test_contract_docs_include_phase_c_sections(repo_root: Path) -> None:
+    doc_path = repo_root / "docs" / "MODULE_WORKFLOW_CONTRACT.md"
+    assert doc_path.exists()
+    content = doc_path.read_text(encoding="utf-8")
+    assert "## 10. Plan review contract" in content
+    assert "## 11. Plan lock creation" in content
+    assert "## 14. Evidence request" in content
+    assert "## 15. Evidence collection" in content
+    assert "## 16. Evidence verification" in content
 
 
 # ---------------------------------------------------------------------------

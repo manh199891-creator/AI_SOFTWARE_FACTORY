@@ -1,13 +1,20 @@
 {
   "schema_version": 1,
+  "module_id": "antigravity.drawbeams",
+  "branch": "task/drawbeams-fix-corridor",
   "task_id": "drawbeams-fix-corridor",
-  "plan_status": "APPROVED",
+  "base_commit": "68b008c476f949b166f2e26ac68010cb2b3259bf",
   "task_sha256": "ca247d8f188f899a6c0bf1f64f649bc100900697987ad086a7ee1052e6274fa6",
-  "scope_sha256": "ee718823062238ee73ab3abecb675893b8a46367993e9ccecdaf077828f89783",
+  "scope_sha256": "0d2689bbd90fa4b0c50977cb5478b578bd288ffe719ab012c704902ed65a5cd3",
   "plan_sha256": "4a838cd929b0f927edb3b9af9a2f86c6d303af0189c1c74a2c1b8c2cc7f3fb83",
+  "approval_file": "src/Antigravity.DrawBeams/.ai-workflow/history/plan-review-run-001.json",
+  "approval_sha256": "882e5fe4164f72de4043a505dee4ff5f199e338e4f8d2364c560b9393e3255b4",
+  "approval_commit": "68b008c476f949b166f2e26ac68010cb2b3259bf",
+  "locked_by": "codex",
+  "locked_at": "2026-08-01T02:00:00Z",
+  "plan_status": "APPROVED",
   "approved_by": "codex",
   "approved_review_run": "plan-review-run-001",
   "approved_at": "2026-08-01T02:00:00Z",
-  "base_commit": "1111111111111111111111111111111111111111",
   "amendment_count": 0
 }

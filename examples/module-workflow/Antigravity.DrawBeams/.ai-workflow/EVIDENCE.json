@@ -1,22 +1,29 @@
 {
   "schema_version": 1,
-  "task_id": "drawbeams-fix-corridor",
-  "module_id": "antigravity-drawbeams",
+  "action": "collect",
+  "status": "READY_FOR_IMPLEMENTATION",
+  "reason_code": "EVIDENCE_READY",
   "repository_root": ".",
+  "module_root": "src/Antigravity.DrawBeams",
   "branch": "task/drawbeams-fix-corridor",
-  "base_commit": "1111111111111111111111111111111111111111",
+  "task_id": "drawbeams-fix-corridor",
+  "base_commit": "68b008c476f949b166f2e26ac68010cb2b3259bf",
   "task_sha256": "ca247d8f188f899a6c0bf1f64f649bc100900697987ad086a7ee1052e6274fa6",
-  "scope_sha256": "ee718823062238ee73ab3abecb675893b8a46367993e9ccecdaf077828f89783",
+  "scope_sha256": "0d2689bbd90fa4b0c50977cb5478b578bd288ffe719ab012c704902ed65a5cd3",
   "plan_sha256": "4a838cd929b0f927edb3b9af9a2f86c6d303af0189c1c74a2c1b8c2cc7f3fb83",
-  "plan_lock_sha256": "5f21c96d37d024d1362aadcb0be9739c1df5603f553b59cc0e34834bea21ffb1",
-  "source_snapshot_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "plan_lock_sha256": "3ac22e2d6cb74eee486d3dc2fe6113ed000272d855f2294fa00e82d999da91b3",
+  "source_snapshot_sha256": "23e0111da2b9bc75a806c40690dcffbb95292a9ef02096970fccfd2a4d9223ee",
   "generated_at": "2026-08-01T02:30:00Z",
+  "ready_to_implement": true,
+  "files_checked": 1,
+  "symbols_checked": 1,
+  "diagnosis_sources_checked": 1,
   "files_verified": [
     {
       "path": "src/Antigravity.DrawBeams/CreateBeamCommand.cs",
       "exists": true,
       "tracked": true,
-      "file_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "file_sha256": "941ef5d5aeabe603a465b8beacb1e9ea6a337d7cf4e72ca7663969f7d371291c",
       "evidence_command": "git ls-files --error-unmatch -- src/Antigravity.DrawBeams/CreateBeamCommand.cs"
     }
   ],
@@ -25,8 +32,9 @@
       "symbol": "CreateBeamCommand",
       "evidence_command": "literal tracked-file search: CreateBeamCommand",
       "matches": [
-        "src/Antigravity.DrawBeams/CreateBeamCommand.cs:10"
-      ]
+        "src/Antigravity.DrawBeams/CreateBeamCommand.cs:12"
+      ],
+      "found_count": 1
     }
   ],
   "diagnosis": "The command does not validate the selected beam input before execution.",
@@ -34,11 +42,15 @@
     {
       "path": "src/Antigravity.DrawBeams/CreateBeamCommand.cs",
       "line_start": 20,
-      "line_end": 35,
+      "line_end": 26,
       "reason": "Input is used without the required validation.",
-      "file_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-      "excerpt_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      "file_sha256": "941ef5d5aeabe603a465b8beacb1e9ea6a337d7cf4e72ca7663969f7d371291c",
+      "excerpt_sha256": "fe45f7803644b08e73036d7346bcec814acbe73bfd7b30e69ab061f575c95a8a"
     }
   ],
-  "ready_to_implement": true
+  "failures": [],
+  "dry_run": false,
+  "files_created": [
+    "src/Antigravity.DrawBeams/.ai-workflow/EVIDENCE.json"
+  ]
 }
